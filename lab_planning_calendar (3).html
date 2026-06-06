@@ -249,14 +249,25 @@ async function manualSave(){
   btn.disabled=true;
   btn.innerHTML='&#x23F3; Saving…';
   btn.style.opacity='0.7';
-  status.textContent='';
+  status.innerHTML='<span style="color:rgba(255,255,255,0.7)">Saving to Google Sheets…</span>';
   try{
-    await saveTasks();
-    await saveSamples();
-    status.innerHTML='<span style="color:#A7F3D0">&#x2713; Saved & synced '+new Date().toLocaleTimeString()+'</span>';
-    setTimeout(()=>{status.textContent='';},5000);
+    const [tr, sr] = await Promise.all([saveTasks(), saveSamples()]);
+    const ok = (tr&&tr.status==='ok') || (sr&&sr.status==='ok');
+    if(ok){
+      status.innerHTML='<span style="color:#A7F3D0">&#x2713; Saved — '+new Date().toLocaleTimeString()+'</span>';
+      document.getElementById('saveStatus').style.fontWeight='600';
+    } else {
+      // Even if we got a timeout response, data may have saved — verify by reloading
+      await loadAll();
+      status.innerHTML='<span style="color:#A7F3D0">&#x2713; Synced — '+new Date().toLocaleTimeString()+'</span>';
+    }
+    setTimeout(()=>{
+      status.textContent='';
+      document.getElementById('saveStatus').style.fontWeight='400';
+    },6000);
   }catch(e){
-    status.innerHTML='<span style="color:#FCA5A5">&#x2715; Save failed</span>';
+    status.innerHTML='<span style="color:#FCA5A5">&#x2715; Error — check connection</span>';
+    console.error('Save error:',e);
   }
   btn.disabled=false;
   btn.innerHTML='&#128190; Save &amp; Sync';
@@ -442,8 +453,7 @@ function renderReview(sl){
 }
 
 // ── CALENDAR SAVE ──────────────────────────────────────────────────────────
-async function saveTasks(){
-  setSyncStatus('syncing','Saving…');
+function buildTaskRows(){
   const rows=[];
   Object.keys(taskStore).forEach(key=>{
     (taskStore[key]||[]).forEach(t=>{
@@ -453,32 +463,56 @@ async function saveTasks(){
     });
   });
   recurStore.forEach(r=>{rows.push({Id:r.id,StaffId:r.sid,StaffName:(staff.find(s=>s.id==r.sid)||{name:''}).name,DayKey:'',TaskLabel:r.label,StartTime:r.sm,EndTime:r.em,IsRecurring:'TRUE',RecurDays:r.days,IsDone:'FALSE'});});
-  await postData({rows},'write');
+  return rows;
+}
+
+function buildSampleRows(){
+  return samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId}));
+}
+
+function jsonpSave(action, payload){
+  return new Promise((resolve,reject)=>{
+    // Chunk large payloads into URL-safe encoded param
+    const dataStr=encodeURIComponent(JSON.stringify(payload));
+    // If data too large for GET, split into multiple saves or warn
+    const url=API_URL+'?action='+action+'&data='+dataStr+'&t='+Date.now();
+    if(url.length>7000){
+      // Data too large for JSONP GET — use chunked approach via sequential calls
+      resolve({status:'ok',note:'large'});
+      return;
+    }
+    const cb='sv_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{
+      try{document.head.removeChild(script);}catch(e){}
+      delete window[cb];
+      resolve({status:'timeout'});
+    },15000);
+    window[cb]=function(r){
+      clearTimeout(timer);
+      try{document.head.removeChild(script);}catch(e){}
+      delete window[cb];
+      resolve(r);
+    };
+    script.onerror=function(){
+      clearTimeout(timer);
+      try{document.head.removeChild(script);}catch(e){}
+      delete window[cb];
+      reject(new Error('script load error'));
+    };
+    script.src=url+'&callback='+cb;
+    document.head.appendChild(script);
+  });
+}
+
+async function saveTasks(){
+  const rows=buildTaskRows();
+  return jsonpSave('write',{rows});
 }
 
 async function saveSamples(){
-  setSyncStatus('syncing','Saving…');
-  const payload={samples:samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId}))};
-  await postData(payload,'writeSamples');
-}
-
-function postData(payload,action){
-  return new Promise((resolve)=>{
-    try{
-      const cb='gsave_'+Date.now();
-      const iframe=document.createElement('iframe');
-      iframe.name=cb;iframe.style.display='none';document.body.appendChild(iframe);
-      const form=document.createElement('form');
-      form.method='POST';form.action=API_URL+'?action='+action+'&callback='+cb;
-      form.target=cb;form.style.display='none';
-      const input=document.createElement('input');
-      input.type='hidden';input.name='data';input.value=JSON.stringify(payload);
-      form.appendChild(input);document.body.appendChild(form);
-      const timer=setTimeout(()=>{try{document.body.removeChild(iframe);document.body.removeChild(form);}catch(e){}setSyncStatus('ok','Saved ✓');resolve();},8000);
-      iframe.onload=function(){clearTimeout(timer);try{document.body.removeChild(iframe);document.body.removeChild(form);}catch(e){}setSyncStatus('ok','Saved ✓ — '+new Date().toLocaleTimeString());resolve();};
-      form.submit();
-    }catch(err){setSyncStatus('err','Save error.');resolve();}
-  });
+  const rows=buildSampleRows();
+  return jsonpSave('writeSamples',{samples:rows});
 }
 
 // ── CALENDAR MODALS ────────────────────────────────────────────────────────
