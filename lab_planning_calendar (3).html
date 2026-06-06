@@ -197,6 +197,7 @@ async function loadFromSheet(){
 }
 
 async function saveToSheet(){
+  isSaving=true;
   setSyncStatus('syncing','Saving…');
   const rows=[];
   Object.keys(taskStore).forEach(key=>{
@@ -216,6 +217,7 @@ async function saveToSheet(){
       try{document.head.removeChild(script);}catch(e){}
       delete window[cb];
       setSyncStatus('err','Save timed out.');
+      isSaving=false;
       resolve();
     },12000);
     window[cb]=function(json){
@@ -224,8 +226,11 @@ async function saveToSheet(){
       delete window[cb];
       if(json&&json.status==='ok'){
         setSyncStatus('ok','Saved — '+new Date().toLocaleTimeString());
+        isSaving=false;
+        loadFromSheet();
       } else {
         setSyncStatus('err','Save failed.');
+        isSaving=false;
       }
       resolve();
     };
@@ -234,6 +239,7 @@ async function saveToSheet(){
       try{document.head.removeChild(script);}catch(e){}
       delete window[cb];
       setSyncStatus('err','Save failed. Check connection.');
+      isSaving=false;
       resolve();
     };
     const data=encodeURIComponent(JSON.stringify({rows}));
@@ -242,8 +248,9 @@ async function saveToSheet(){
   });
 }
 
-// Auto-refresh every 30 seconds
-setInterval(loadFromSheet,30000);
+// Auto-refresh every 30 seconds — only when not saving
+let isSaving=false;
+let refreshTimer=setInterval(()=>{if(!isSaving)loadFromSheet();},30000);
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 const sc=s=>SC[s.ci%SC.length];
