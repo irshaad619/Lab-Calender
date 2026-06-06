@@ -361,19 +361,27 @@ function getReportDueDate(testEndDate){
 }
 
 function getReportFlag(s){
-  // Only flag if test is completed or report not yet sent
-  if(s.status === 'Report sent' || s.status === 'Invoice done & forwarded') return null;
-  if(!s.testEndDate) return null;
-  const due = getReportDueDate(s.testEndDate);
+  // Don't flag if report already sent or invoiced
+  if(s.status==='Report sent'||s.status==='Invoice done & forwarded') return null;
+  // Only flag once test is completed (has a test end date)
+  if(!s.testEndDate||String(s.testEndDate).trim()==='') return null;
+  // Parse test end date robustly
+  let endDate = new Date(s.testEndDate);
+  if(isNaN(endDate.getTime())){
+    // Try parsing YYYY-MM-DD manually
+    const parts = String(s.testEndDate).split('-');
+    if(parts.length===3) endDate = new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+    if(isNaN(endDate.getTime())) return null;
+  }
+  const due = getReportDueDate(endDate.toISOString().split('T')[0]);
   if(!due) return null;
   const now = new Date();
   now.setHours(0,0,0,0);
-  const dueDay = new Date(due);
-  dueDay.setHours(0,0,0,0);
+  const dueDay = new Date(due.getFullYear(),due.getMonth(),due.getDate());
   const diffMs = dueDay - now;
-  const diffDays = Math.ceil(diffMs / (1000*60*60*24));
-  if(diffDays < 0) return {type:'overdue', days: Math.abs(diffDays), due};
-  if(diffDays <= 2) return {type:'due-soon', days: diffDays, due};
+  const diffDays = Math.ceil(diffMs/(1000*60*60*24));
+  if(diffDays<0) return {type:'overdue',days:Math.abs(diffDays),due};
+  if(diffDays<=2) return {type:'due-soon',days:diffDays,due};
   return null;
 }
 
@@ -762,10 +770,15 @@ function openEditSample(rowId){
 
 function openAssign(rowId){
   const s=samples.find(x=>x.rowId===rowId);if(!s)return;
-  openModal(`<h3>&#128197; Assign to calendar — ${s.id}</h3>
-    <div style="background:#f5f4f0;border-radius:8px;padding:10px 12px;margin-bottom:1rem;font-size:13px">
+  const currentAssign=s.assignedTo?`<div style="background:#EEEDFE;border:1px solid #AFA9EC;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px;display:flex;align-items:center;justify-content:space-between">
+    <span>Currently assigned to <strong style="color:#534AB7">${s.assignedTo}</strong></span>
+    <button onclick="unassignSample('${rowId}')" style="background:#fff;border:1px solid #F0997B;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:#993C1D">✕ Unassign</button>
+  </div>`:'';
+  openModal(`<h3>&#128197; Assign to calendar — ${s.id||s.client}</h3>
+    <div style="background:#f5f4f0;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px">
       <strong>${s.client}</strong> · ${s.testType}${s.matrix?' · '+s.matrix:''}
     </div>
+    ${currentAssign}
     <div class="fg">
       <div class="field"><label>Technician</label><select id="a-staff">${staffOpts(s.assignedTo)}</select></div>
       <div class="field"><label>Task label</label><input id="a-label" value="${s.testType} — ${s.client}"></div>
@@ -778,7 +791,18 @@ function openAssign(rowId){
       <div class="field"><label>Start time</label><input id="a-start" value="08h00"></div>
       <div class="field"><label>End time</label><input id="a-end" value="10h00"></div>
     </div>
-    <div class="ma"><button class="bc" onclick="closeModal()">Cancel</button><button class="bp" onclick="assignToCalendar('${rowId}')">&#128197; Add to calendar</button></div>`);
+    <div class="ma">
+      <button class="bc" onclick="closeModal()">Cancel</button>
+      <button class="bp" onclick="assignToCalendar('${rowId}')">&#128197; Add to calendar</button>
+    </div>`);
+}
+
+function unassignSample(rowId){
+  const s=samples.find(x=>x.rowId===rowId);
+  if(!s)return;
+  if(!confirm('Remove assignment from '+s.assignedTo+'? This will NOT remove the task from the calendar — delete it manually if needed.'))return;
+  s.assignedTo='';
+  saveLocal();markUnsaved();closeModal();renderReg();
 }
 
 function assignToCalendar(rowId){
