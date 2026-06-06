@@ -84,7 +84,7 @@ table.reg{width:100%;border-collapse:collapse;min-width:1000px}
 table.reg thead th{background:#f5f4f0;padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#888780;border-bottom:1px solid #d3d1c7;white-space:nowrap}
 table.reg tbody tr{border-bottom:1px solid #f1efe8;transition:background .1s}
 table.reg tbody tr:last-child{border-bottom:none}
-table.reg tbody tr:hover{background:#fafaf8}
+table.reg tbody tr:hover{filter:brightness(0.97)}
 table.reg tbody td{padding:10px 12px;font-size:13px;color:#2c2c2a;vertical-align:middle}
 .badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
 .b-received{background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD}
@@ -218,7 +218,7 @@ table.reg tbody td{padding:10px 12px;font-size:13px;color:#2c2c2a;vertical-align
 </div>
 
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbyxljbPbO3VC_3ZIi8gygiHnObDctESNDxsXlSoeqQIosVunG8XKNU8KsSYq7blrem25g/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbx_tYevsJk1OxbG5I5bkUxzVc8IbognhZQQ9XT4qJ8LuQ2hKAm0xlY6pO3gmfQHkp3JLA/exec';
 const SC=[{c:'#534AB7',bg:'#EEEDFE',bd:'#AFA9EC'},{c:'#185FA5',bg:'#E6F1FB',bd:'#85B7EB'},{c:'#0F6E56',bg:'#E1F5EE',bd:'#5DCAA5'},{c:'#993C1D',bg:'#FAECE7',bd:'#F0997B'},{c:'#854F0B',bg:'#FAEEDA',bd:'#EF9F27'},{c:'#72243E',bg:'#FBEAF0',bd:'#ED93B1'},{c:'#3B6D11',bg:'#EAF3DE',bd:'#97C459'},{c:'#5F5E5A',bg:'#F1EFE8',bd:'#B4B2A9'}];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SH=7,EH=18,DMINS=(EH-SH)*60,SLOT=30,SCOLS=DMINS/SLOT,SW=36,NW=114;
@@ -343,6 +343,21 @@ function ck(sid,d,tid){return `${sid}|${d}|${tid}`;}
 function isDone(sid,d,tid){return !!compStore[ck(sid,d,tid)];}
 function toggleDone(sid,d,tid){compStore[ck(sid,d,tid)]=!compStore[ck(sid,d,tid)];saveTasks();renderCal();}
 function fmtDate(d){if(!d||d==='')return '<span style="color:#d3d1c7">—</span>';try{const dt=new Date(d);if(isNaN(dt.getTime()))return d;return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return d;}}
+function fmtDateTime(d,t){
+  if(!d||d==='')return '<span style="color:#d3d1c7">—</span>';
+  try{
+    const dt=new Date(d);
+    if(isNaN(dt.getTime()))return d;
+    const dateStr=dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    if(!t||t==='')return dateStr;
+    // Format time from HH:MM to 12h format
+    const [h,m]=t.split(':');
+    const hour=parseInt(h);
+    const ampm=hour>=12?'PM':'AM';
+    const h12=hour%12||12;
+    return dateStr+'<br><span style="font-size:11px;color:#534AB7;font-weight:500">'+h12+':'+m+' '+ampm+'</span>';
+  }catch(e){return d;}
+}
 
 // ── CALENDAR RENDER ────────────────────────────────────────────────────────
 function renderCal(){
@@ -481,7 +496,7 @@ function buildTaskRows(){
 }
 
 function buildSampleRows(){
-  return samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId}));
+  return samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,ReceptionTime:s.receptionTime||'',TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId}));
 }
 
 // ── RELIABLE SAVE via fetch POST no-cors ─────────────────────────────────
@@ -601,12 +616,29 @@ function renderReg(){
   tbody.innerHTML=filtered.map(s=>{
     const badge=SBADGE[s.status]||'b-pending';
     const priColor=s.priority==='High'?'color:#993C1D':s.priority==='Medium'?'color:#854F0B':'';
-    return `<tr>
+    // Row background colour based on status
+    const rowBg={
+      'Sample received':'#EFF6FF',
+      'Test in progress':'#FFFBEB',
+      'Test completed':'#F0FDF4',
+      'Report sent':'#F5F3FF',
+      'Invoice done & forwarded':'#FDF2F8'
+    }[s.status]||'#fff';
+    const rowBorder={
+      'Sample received':'#BFDBFE',
+      'Test in progress':'#FDE68A',
+      'Test completed':'#BBF7D0',
+      'Report sent':'#DDD6FE',
+      'Invoice done & forwarded':'#FBCFE8'
+    }[s.status]||'#f1efe8';
+    return `<tr style="background:${rowBg};border-bottom:1px solid ${rowBorder}">
       <td><strong style="${priColor}">${s.id||'—'}</strong>${s.priority==='High'?' <span title="High priority" style="color:#993C1D">⚠</span>':''}</td>
       <td>${s.client||'—'}</td><td>${s.testType||'—'}</td><td>${s.matrix||'—'}</td>
       <td style="text-align:center">${s.quantity||'—'}</td>
-      <td>${fmtDate(s.receptionDate)}</td><td>${fmtDate(s.testStartDate)}</td>
-      <td>${fmtDate(s.testEndDate)}</td><td>${fmtDate(s.reportSentDate)}</td>
+      <td>${fmtDateTime(s.receptionDate,s.receptionTime)}</td>
+      <td>${fmtDate(s.testStartDate)}</td>
+      <td>${fmtDate(s.testEndDate)}</td>
+      <td>${fmtDate(s.reportSentDate)}</td>
       <td>${s.assignedTo?`<span style="color:#534AB7;font-weight:500">${s.assignedTo}</span>`:'<span style="color:#d3d1c7">Unassigned</span>'}</td>
       <td><span class="badge ${badge}">${s.status}</span></td>
       <td><div style="display:flex;gap:4px;flex-wrap:wrap">
@@ -644,6 +676,7 @@ function sampleForm(s={}){
     <div class="shd2">Dates</div>
     <div class="fg">
       <div class="field"><label>Reception date</label><input type="date" id="f-reception" value="${s.receptionDate||''}"></div>
+      <div class="field"><label>Reception time</label><input type="time" id="f-reception-time" value="${s.receptionTime||''}" placeholder="e.g. 09:30"></div>
       <div class="field"><label>Test start date</label><input type="date" id="f-teststart" value="${s.testStartDate||''}"></div>
       <div class="field"><label>Test end date</label><input type="date" id="f-testend" value="${s.testEndDate||''}"></div>
       <div class="field"><label>Report sent date</label><input type="date" id="f-report" value="${s.reportSentDate||''}"></div>
@@ -664,6 +697,7 @@ function getFormData(){
     matrix:document.getElementById('f-matrix').value,
     quantity:document.getElementById('f-qty').value.trim(),
     receptionDate:document.getElementById('f-reception').value,
+    receptionTime:document.getElementById('f-reception-time').value,
     testStartDate:document.getElementById('f-teststart').value,
     testEndDate:document.getElementById('f-testend').value,
     reportSentDate:document.getElementById('f-report').value,
@@ -824,7 +858,7 @@ function mergeSheetData(json){
     samples = json.samples.map(s=>({
       id:s.Id||'',client:s.Client||'',testType:s.TestType||'',
       matrix:s.Matrix||'',quantity:s.Quantity||'',
-      receptionDate:s.ReceptionDate||'',testStartDate:s.TestStartDate||'',
+      receptionDate:s.ReceptionDate||'',receptionTime:s.ReceptionTime||'',testStartDate:s.TestStartDate||'',
       testEndDate:s.TestEndDate||'',reportSentDate:s.ReportSentDate||'',
       assignedTo:s.AssignedTo||'',status:s.Status||'Sample received',
       notes:s.Notes||'',priority:s.Priority||'Normal',rowId:s.RowId||''
