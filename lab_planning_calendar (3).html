@@ -262,7 +262,8 @@ function navigate(d){offset+=d;render();}
 function goToday(){offset=0;render();}
 function getDate(){const d=new Date(today);if(view==='daily')d.setDate(d.getDate()+offset);else{const day=d.getDay()||7;d.setDate(d.getDate()-day+1+offset*7);}return d;}
 function fmt(d){return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});}
-function getDK(d){return DAYS[(d.getDay()+6)%7];}
+function getDK(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function dayName(d){return DAYS[(d.getDay()+6)%7];}
 function filteredStaff(){const f=document.getElementById('staffFilter').value;return f==='all'?staff:staff.filter(s=>s.id==f);}
 function updateFilter(){const sel=document.getElementById('staffFilter'),cur=sel.value;sel.innerHTML='<option value="all">All staff</option>'+staff.map(s=>`<option value="${s.id}"${s.id==cur?' selected':''}>${s.name}</option>`).join('');}
 function parseT(v){if(!v&&v!==0)return null;v=String(v).trim().toLowerCase().replace(/[h.]/g,':');if(/^\d{1,2}$/.test(v))v+=':00';const p=v.split(':');const h=parseInt(p[0]||0),m=parseInt(p[1]||0);if(isNaN(h)||isNaN(m))return null;return Math.max(SH*60,Math.min(EH*60,h*60+m));}
@@ -271,7 +272,7 @@ function slotOf(m){return Math.floor((m-SH*60)/SLOT);}
 function tk(sid,d){return `${sid}|${d}`;}
 function getT(sid,d){return taskStore[tk(sid,d)]||[];}
 function setT(sid,d,a){taskStore[tk(sid,d)]=a;}
-function getRec(sid,d){return recurStore.filter(r=>r.sid===sid&&(r.days==='daily'||r.days.split(',').includes(d)));}
+function getRec(sid,dk){const p=dk.split('-');const dn=DAYS[(new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2])).getDay()+6)%7];return recurStore.filter(r=>r.sid===sid&&(r.days==='daily'||r.days.split(',').includes(dn)));}
 function allT(sid,d){return [...getT(sid,d),...getRec(sid,d).map(r=>({id:'R'+r.id,label:r.label,sm:r.sm,em:r.em,isRec:true,rid:r.id}))];}
 function ck(sid,d,tid){return `${sid}|${d}|${tid}`;}
 function isDone(sid,d,tid){return !!compStore[ck(sid,d,tid)];}
@@ -279,7 +280,8 @@ function toggleDone(sid,d,tid){compStore[ck(sid,d,tid)]=!compStore[ck(sid,d,tid)
 
 // ── STATS ─────────────────────────────────────────────────────────────────
 function renderStats(sl){
-  const days=view==='daily'?[getDK(getDate())]:DAYS;
+  const d0=getDate();
+  const days=view==='daily'?[getDK(d0)]:(()=>{const a=[];for(let i=0;i<7;i++){const x=new Date(d0);x.setDate(x.getDate()+i);a.push(getDK(x));}return a;})();
   let total=0,done=0,hrs=0;
   sl.forEach(s=>days.forEach(d=>{allT(s.id,d).forEach(t=>{total++;if(isDone(s.id,d,t.id))done++;hrs+=(t.em-t.sm)/60;});}));
   document.getElementById('statsRow').innerHTML=`
@@ -291,7 +293,7 @@ function renderStats(sl){
 
 // ── DAILY TABLE ───────────────────────────────────────────────────────────
 function renderDailyTable(date,sl){
-  const day=getDK(date),totalW=NW+SCOLS*SW;
+  const day=getDK(date),totalW=NW+SCOLS*SW; // day is now ISO date
   let h=`<div class="outer"><div style="position:relative;min-width:${totalW}px"><table class="cal" style="width:${totalW}px;min-width:${totalW}px"><thead><tr>`;
   h+=`<th class="nhd" style="width:${NW}px;min-width:${NW}px">${fmt(date)}${isToday(date)?' <span style="background:#EEEDFE;color:#534AB7;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700">Today</span>':''}</th>`;
   for(let i=0;i<SCOLS;i++){const mins=SH*60+i*SLOT,isHr=i%2===0;h+=`<th class="shd${isHr?' hr':''}" style="width:${SW}px;min-width:${SW}px"><span>${isHr?fmtT(mins):''}</span></th>`;}
@@ -327,16 +329,18 @@ function renderDailyTable(date,sl){
 // ── WEEKLY GRID ───────────────────────────────────────────────────────────
 function renderWeekly(startDate,sl){
   const tw=NW+DAYS.length*130;
+  const wDates=[];for(let i=0;i<7;i++){const x=new Date(startDate);x.setDate(x.getDate()+i);wDates.push(x);}
   let h=`<div class="outer"><table style="border-collapse:collapse;min-width:${tw}px;width:100%"><thead><tr>`;
   h+=`<th style="width:${NW}px;min-width:${NW}px;background:#f5f4f0;border-bottom:1px solid #d3d1c7;border-right:1px solid #d3d1c7;padding:0 8px;height:30px;font-size:11px;font-weight:600;color:#888780;text-align:left;vertical-align:middle">Staff</th>`;
-  DAYS.forEach((d,i)=>{const dd=new Date(startDate);dd.setDate(dd.getDate()+i);h+=`<th style="background:#f5f4f0;border-bottom:1px solid #d3d1c7;border-right:1px solid #eee;padding:0 8px;height:30px;font-size:11px;font-weight:600;color:#2c2c2a;text-align:left;vertical-align:middle">${d} ${dd.getDate()}${isToday(dd)?' <span style="background:#EEEDFE;color:#534AB7;font-size:9px;padding:1px 4px;border-radius:3px">today</span>':''}</th>`;});
+  wDates.forEach((dd)=>{h+=`<th style="background:#f5f4f0;border-bottom:1px solid #d3d1c7;border-right:1px solid #eee;padding:0 8px;height:30px;font-size:11px;font-weight:600;color:#2c2c2a;text-align:left;vertical-align:middle">${DAYS[(dd.getDay()+6)%7]} ${dd.getDate()}${isToday(dd)?' <span style="background:#EEEDFE;color:#534AB7;font-size:9px;padding:1px 4px;border-radius:3px">today</span>':''}</th>`;});
   h+=`</tr></thead><tbody>`;
   sl.forEach(s=>{
     const c=sc(s);
     h+=`<tr><td style="width:${NW}px;min-width:${NW}px;padding:8px;border-right:1px solid #d3d1c7;border-bottom:1px solid #d3d1c7;vertical-align:middle;background:#fff"><div style="display:flex;align-items:center;gap:6px"><div class="av" style="background:${c.bg};color:${c.c}">${ini(s.name)}</div><div><div style="font-size:11px;font-weight:600">${s.name}</div><div style="font-size:9px;color:#888780">${s.role}</div></div></div></td>`;
-    DAYS.forEach(d=>{
+    wDates.forEach((wDate,wi)=>{
+      const d=getDK(wDate);
       const ts=allT(s.id,d);
-      h+=`<td style="border-right:1px solid #eee;border-bottom:1px solid #d3d1c7;padding:5px;vertical-align:top;min-height:46px;background:#fff;cursor:pointer;min-width:120px" onclick="openAdd(${s.id},'${d}',null)">`;
+      h+=`<td style="border-right:1px solid #eee;border-bottom:1px solid #d3d1c7;padding:5px;vertical-align:top;min-height:46px;background:#fff;cursor:pointer;min-width:120px" onclick="openAdd(${s.id},'${d}',null)">`;  // d is ISO date
       ts.forEach(t=>{const done=isDone(s.id,d,t.id);const safeId=String(t.id).replace(/'/g,"\\'");h+=`<div style="border-radius:3px;padding:2px 5px;font-size:10px;font-weight:600;margin-bottom:2px;display:flex;align-items:center;gap:3px;background:${c.bg};color:${c.c};border:1px solid ${c.bd};${done?'opacity:.45;text-decoration:line-through':''}cursor:pointer" onclick="event.stopPropagation();openEdit(${s.id},'${d}','${safeId}')">${t.isRec?'&#x21BA;&nbsp;':''}${done?'&#x2713;&nbsp;':''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${t.label}</span><span style="font-size:8px;opacity:.7">${fmtT(t.sm)}</span></div>`;});
       h+=`<div style="font-size:10px;color:#aaa;margin-top:2px">+ add</div></td>`;
     });
