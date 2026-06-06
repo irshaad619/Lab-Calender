@@ -146,55 +146,62 @@ function setSyncStatus(state,msg){
   txt.textContent=msg;
 }
 
-function jsonp(url){
-  return new Promise((resolve,reject)=>{
-    const cb='cb_'+Math.random().toString(36).slice(2);
-    const script=document.createElement('script');
-    const timer=setTimeout(()=>{
-      cleanup();reject(new Error('timeout'));
-    },15000);
-    function cleanup(){
-      clearTimeout(timer);
-      document.head.removeChild(script);
-      delete window[cb];
-    }
-    window[cb]=function(data){cleanup();resolve(data);};
-    script.src=url+(url.includes('?')?'&':'?')+'callback='+cb;
-    script.onerror=()=>{cleanup();reject(new Error('script error'));};
-    document.head.appendChild(script);
-  });
-}
-
 async function loadFromSheet(){
   setSyncStatus('syncing','Loading shared data…');
   try{
-    const json=await jsonp(API_URL+'?action=read');
-    if(json.data){
-      taskStore={};compStore={};recurStore=[];nextTid=1;nextRid=1;
-      json.data.forEach(row=>{
-        if(!row.Id||!row.TaskLabel)return;
-        const sid=parseInt(row.StaffId);
-        const day=row.DayKey;
-        const isRec=row.IsRecurring==='TRUE'||row.IsRecurring===true||row.IsRecurring==='1';
-        const isDone=row.IsDone==='TRUE'||row.IsDone===true||row.IsDone==='1';
-        if(isRec){
-          recurStore.push({id:row.Id,sid,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime),days:row.RecurDays||'daily'});
-          const n=parseInt(row.Id.replace('r',''))||0;if(n>=nextRid)nextRid=n+1;
-        } else {
-          const k=tk(sid,day);
-          if(!taskStore[k])taskStore[k]=[];
-          taskStore[k].push({id:row.Id,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime)});
-          if(isDone)compStore[ck(sid,day,row.Id)]=true;
-          const n=parseInt(row.Id.replace('t',''))||0;if(n>=nextTid)nextTid=n+1;
-        }
-      });
-      setSyncStatus('ok','Live — last synced '+new Date().toLocaleTimeString());
-    }
-  }catch(e){
-    setSyncStatus('err','Could not connect. Check your connection.');
-    console.error('Load error:',e);
-  }
-  render();
+    const res=await fetch(API_URL+'?action=read',{method:'GET',mode:'no-cors'});
+  }catch(e){}
+
+  // Use JSONP as primary method
+  return new Promise((resolve)=>{
+    const cb='gcb_'+Date.now();
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{
+      try{document.head.removeChild(script);}catch(e){}
+      delete window[cb];
+      setSyncStatus('err','Connection timed out. Retrying…');
+      render();
+      resolve();
+    },12000);
+    window[cb]=function(json){
+      clearTimeout(timer);
+      try{document.head.removeChild(script);}catch(e){}
+      delete window[cb];
+      if(json&&json.data){
+        taskStore={};compStore={};recurStore=[];nextTid=1;nextRid=1;
+        json.data.forEach(row=>{
+          if(!row.Id||!row.TaskLabel)return;
+          const sid=parseInt(row.StaffId);
+          const day=row.DayKey;
+          const isRec=String(row.IsRecurring).toUpperCase()==='TRUE';
+          const done=String(row.IsDone).toUpperCase()==='TRUE';
+          if(isRec){
+            recurStore.push({id:row.Id,sid,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime),days:row.RecurDays||'daily'});
+            const n=parseInt(String(row.Id).replace('r',''))||0;if(n>=nextRid)nextRid=n+1;
+          } else {
+            const k=tk(sid,day);
+            if(!taskStore[k])taskStore[k]=[];
+            taskStore[k].push({id:row.Id,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime)});
+            if(done)compStore[ck(sid,day,row.Id)]=true;
+            const n=parseInt(String(row.Id).replace('t',''))||0;if(n>=nextTid)nextTid=n+1;
+          }
+        });
+        setSyncStatus('ok','Live — last synced '+new Date().toLocaleTimeString());
+      }
+      render();
+      resolve();
+    };
+    script.onerror=function(){
+      clearTimeout(timer);
+      try{document.head.removeChild(script);}catch(e){}
+      delete window[cb];
+      setSyncStatus('err','Could not connect. Check your internet.');
+      render();
+      resolve();
+    };
+    script.src=API_URL+'?action=read&callback='+cb+'&t='+Date.now();
+    document.head.appendChild(script);
+  });
 }
 
 async function saveToSheet(){
@@ -210,14 +217,37 @@ async function saveToSheet(){
   recurStore.forEach(r=>{
     rows.push({Id:r.id,StaffId:r.sid,StaffName:(staff.find(s=>s.id==r.sid)||{name:''}).name,DayKey:'',TaskLabel:r.label,StartTime:r.sm,EndTime:r.em,IsRecurring:'TRUE',RecurDays:r.days,IsDone:'FALSE'});
   });
-  try{
+  return new Promise((resolve)=>{
+    const cb='gsave_'+Date.now();
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{
+      try{document.head.removeChild(script);}catch(e){}
+      delete window[cb];
+      setSyncStatus('err','Save timed out.');
+      resolve();
+    },12000);
+    window[cb]=function(json){
+      clearTimeout(timer);
+      try{document.head.removeChild(script);}catch(e){}
+      delete window[cb];
+      if(json&&json.status==='ok'){
+        setSyncStatus('ok','Saved — '+new Date().toLocaleTimeString());
+      } else {
+        setSyncStatus('err','Save failed.');
+      }
+      resolve();
+    };
+    script.onerror=function(){
+      clearTimeout(timer);
+      try{document.head.removeChild(script);}catch(e){}
+      delete window[cb];
+      setSyncStatus('err','Save failed. Check connection.');
+      resolve();
+    };
     const data=encodeURIComponent(JSON.stringify({rows}));
-    await jsonp(API_URL+'?action=write&data='+data);
-    setSyncStatus('ok','Saved — '+new Date().toLocaleTimeString());
-  }catch(e){
-    setSyncStatus('err','Save failed. Check your connection.');
-    console.error('Save error:',e);
-  }
+    script.src=API_URL+'?action=write&data='+data+'&callback='+cb+'&t='+Date.now();
+    document.head.appendChild(script);
+  });
 }
 
 // Auto-refresh every 30 seconds
