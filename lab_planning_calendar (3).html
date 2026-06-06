@@ -198,12 +198,13 @@ table.reg tbody td{padding:10px 12px;font-size:13px;color:#2c2c2a;vertical-align
       <option>VET</option><option>Blood</option><option>Urine</option>
       <option>Soil</option><option>Air</option><option>Other</option>
     </select>
-    <button class="btn btn-primary" onclick="openAddSample()">+ New sample</button>
+    <button onclick="toggleRegistryLock()" id="lockBtn" style="background:#fff;border:1px solid #d3d1c7;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;color:#5f5e5a;display:flex;align-items:center;gap:6px">🔒 Locked</button>
+    <button class="btn btn-primary" onclick="lockedOpenAddSample()">+ New sample</button>
   </div>
   <div class="tbl-wrap">
     <table class="reg">
       <thead><tr>
-        <th>Sample ID</th><th>Client</th><th>Test Type</th><th>Matrix</th><th>Qty</th>
+        <th>Sample ID</th><th>PO / Quote</th><th>Client</th><th>Test Type</th><th>Matrix</th><th>Qty</th>
         <th>Received</th><th>Test Start</th><th>Test End</th><th>Report Sent</th>
         <th>Assigned To</th><th>Status</th><th>Actions</th>
       </tr></thead>
@@ -218,7 +219,44 @@ table.reg tbody td{padding:10px 12px;font-size:13px;color:#2c2c2a;vertical-align
 </div>
 
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbyhJZ0SmpMk_2w0yRGnMexxVxKOwPbbEXL-F-BfVlMhJq9AlkTW1HxVTydVypyP_vwFmg/exec';
+// ── ACCESS CONTROL ───────────────────────────────────────────────────────
+// Set the PIN for registry edit access. Staff without PIN can VIEW only.
+const REGISTRY_EDIT_PIN = '281087'; // Change this to your preferred PIN
+let registryEditUnlocked = false;
+
+function checkEditAccess(callback){
+  if(registryEditUnlocked){ callback(); return; }
+  const pin = prompt('Enter PIN to edit Sample Registry:');
+  if(pin === null) return; // cancelled
+  if(pin === REGISTRY_EDIT_PIN){
+    registryEditUnlocked = true;
+    // Lock again after 60 minutes of inactivity
+    setTimeout(()=>{ registryEditUnlocked=false; }, 60*60*1000);
+    callback();
+  } else {
+    alert('Incorrect PIN. Contact your lab administrator.');
+  }
+}
+
+function lockedOpenAddSample(){ checkEditAccess(()=>openAddSample()); }
+function lockedOpenEditSample(rowId){ checkEditAccess(()=>openEditSample(rowId)); }
+function lockedOpenAssign(rowId){ checkEditAccess(()=>openAssign(rowId)); }
+function lockedDeleteSample(rowId){ checkEditAccess(()=>deleteSample(rowId)); }
+
+function toggleRegistryLock(){
+  if(registryEditUnlocked){
+    registryEditUnlocked=false;
+    document.getElementById('lockBtn').innerHTML='🔒 Locked';
+    document.getElementById('lockBtn').style.color='#5f5e5a';
+  } else {
+    checkEditAccess(()=>{
+      document.getElementById('lockBtn').innerHTML='🔓 Unlocked';
+      document.getElementById('lockBtn').style.color='#0F6E56';
+    });
+  }
+}
+
+const API_URL='https://script.google.com/macros/s/AKfycbxQjqGVXMzcu0C2-_YR4UF97_hvVCST6sNq3OYzsjrCi5kvAFOYgqbHSphk7-pJPmbdPA/exec';
 const SC=[{c:'#534AB7',bg:'#EEEDFE',bd:'#AFA9EC'},{c:'#185FA5',bg:'#E6F1FB',bd:'#85B7EB'},{c:'#0F6E56',bg:'#E1F5EE',bd:'#5DCAA5'},{c:'#993C1D',bg:'#FAECE7',bd:'#F0997B'},{c:'#854F0B',bg:'#FAEEDA',bd:'#EF9F27'},{c:'#72243E',bg:'#FBEAF0',bd:'#ED93B1'},{c:'#3B6D11',bg:'#EAF3DE',bd:'#97C459'},{c:'#5F5E5A',bg:'#F1EFE8',bd:'#B4B2A9'}];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SH=7,EH=18,DMINS=(EH-SH)*60,SLOT=30,SCOLS=DMINS/SLOT,SW=36,NW=114;
@@ -538,7 +576,7 @@ function buildTaskRows(){
 }
 
 function buildSampleRows(){
-  return samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,ReceptionTime:s.receptionTime||'',TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId,OverdueComment:s.overdueComment||'',ReportSentLate:s.reportSentLate||'',DaysOverdue:s.daysOverdue||''}));
+  return samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,ReceptionTime:s.receptionTime||'',TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId,OverdueComment:s.overdueComment||'',ReportSentLate:s.reportSentLate||'',DaysOverdue:s.daysOverdue||'',PONumber:s.poNumber||''}));
 }
 
 // ── RELIABLE SAVE via fetch POST no-cors ─────────────────────────────────
@@ -685,6 +723,7 @@ function renderReg(){
     }[s.status]||'#f1efe8';
     return `<tr style="background:${rowBg};border-bottom:1px solid ${rowBorder}">
       <td><strong style="${priColor}">${s.id||'—'}</strong>${s.priority==='High'?' <span title="High priority" style="color:#993C1D">⚠</span>':''}</td>
+      <td>${s.poNumber?`<span style="font-size:12px;font-weight:600;color:#0F6E56">${s.poNumber}</span>`:'<span style="color:#d3d1c7">—</span>'}</td>
       <td>${s.client||'—'}</td><td>${s.testType||'—'}</td><td>${s.matrix||'—'}</td>
       <td style="text-align:center">${s.quantity||'—'}</td>
       <td>${fmtDateTime(s.receptionDate,s.receptionTime)}</td>
@@ -699,9 +738,9 @@ function renderReg(){
         ${s.overdueComment?`<div style="font-size:10px;color:#6B7280;margin-top:3px;font-style:italic">💬 ${s.overdueComment}</div>`:''}
       </td>
       <td><div style="display:flex;gap:4px;flex-wrap:wrap">
-        <button class="abtn" onclick="openEditSample('${s.rowId}')">&#9998; Edit</button>
-        <button class="abtn assign" onclick="openAssign('${s.rowId}')">&#128197; Assign</button>
-        <button class="abtn" onclick="deleteSample('${s.rowId}')" style="color:#993C1D;border-color:#F0997B">&#x2715;</button>
+        <button class="abtn" onclick="lockedOpenEditSample('${s.rowId}')">&#9998; Edit</button>
+        <button class="abtn assign" onclick="lockedOpenAssign('${s.rowId}')">&#128197; Assign</button>
+        <button class="abtn" onclick="lockedDeleteSample('${s.rowId}')" style="color:#993C1D;border-color:#F0997B">&#x2715;</button>
       </div></td>
     </tr>`;
   }).join('');
@@ -717,6 +756,7 @@ function sampleForm(s={}){
     <div class="shd2">Sample information</div>
     <div class="fg">
       <div class="field"><label>Sample ID <span style="font-weight:400;color:#888">(optional)</span></label><input id="f-id" value="${s.id||''}" placeholder="e.g. ABL-2026-001"></div>
+      <div class="field"><label>PO / Quote No.</label><input id="f-ponum" value="${s.poNumber||''}" placeholder="e.g. PO-2026-045"></div>
       <div class="field"><label>Priority</label><select id="f-priority"><option${(s.priority||'Normal')==='Normal'?' selected':''}>Normal</option><option${s.priority==='Medium'?' selected':''}>Medium</option><option${s.priority==='High'?' selected':''}>High</option></select></div>
       <div class="field"><label>Client *</label>
         <input id="f-client" value="${s.client||''}" placeholder="Type or select client" list="client-list">
@@ -749,6 +789,7 @@ function sampleForm(s={}){
 function getFormData(){
   return {
     id:document.getElementById('f-id').value.trim(),
+    poNumber:(document.getElementById('f-ponum')?document.getElementById('f-ponum').value.trim():''),
     client:document.getElementById('f-client').value.trim(),
     testType:(document.getElementById('f-test').value||'').trim(),
     matrix:document.getElementById('f-matrix').value,
@@ -956,7 +997,8 @@ function mergeSheetData(json){
       notes:s.Notes||'',priority:s.Priority||'Normal',rowId:s.RowId||'',
       overdueComment:s.OverdueComment||'',
       reportSentLate:s.ReportSentLate||'',
-      daysOverdue:s.DaysOverdue||''
+      daysOverdue:s.DaysOverdue||'',
+      poNumber:s.PONumber||''
     }));
   }
 
