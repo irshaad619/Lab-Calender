@@ -218,7 +218,7 @@ table.reg tbody td{padding:10px 12px;font-size:13px;color:#2c2c2a;vertical-align
 </div>
 
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbyKe9ctzfb-DwpbghYIgZpKf-1uz7QNiU7juLnTu4QiL6NDWxEY__LNbOkOB_Q4yl9yaQ/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbyhJZ0SmpMk_2w0yRGnMexxVxKOwPbbEXL-F-BfVlMhJq9AlkTW1HxVTydVypyP_vwFmg/exec';
 const SC=[{c:'#534AB7',bg:'#EEEDFE',bd:'#AFA9EC'},{c:'#185FA5',bg:'#E6F1FB',bd:'#85B7EB'},{c:'#0F6E56',bg:'#E1F5EE',bd:'#5DCAA5'},{c:'#993C1D',bg:'#FAECE7',bd:'#F0997B'},{c:'#854F0B',bg:'#FAEEDA',bd:'#EF9F27'},{c:'#72243E',bg:'#FBEAF0',bd:'#ED93B1'},{c:'#3B6D11',bg:'#EAF3DE',bd:'#97C459'},{c:'#5F5E5A',bg:'#F1EFE8',bd:'#B4B2A9'}];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SH=7,EH=18,DMINS=(EH-SH)*60,SLOT=30,SCOLS=DMINS/SLOT,SW=36,NW=114;
@@ -538,7 +538,7 @@ function buildTaskRows(){
 }
 
 function buildSampleRows(){
-  return samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,ReceptionTime:s.receptionTime||'',TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId,OverdueComment:s.overdueComment||''}));
+  return samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,ReceptionTime:s.receptionTime||'',TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId,OverdueComment:s.overdueComment||'',ReportSentLate:s.reportSentLate||'',DaysOverdue:s.daysOverdue||''}));
 }
 
 // ── RELIABLE SAVE via fetch POST no-cors ─────────────────────────────────
@@ -633,13 +633,17 @@ function renderRegStats(){
   const completed=samples.filter(s=>s.status==='Test completed').length;
   const report=samples.filter(s=>s.status==='Report sent').length;
   const invoice=samples.filter(s=>s.status==='Invoice done & forwarded').length;
+  const lateReports=samples.filter(s=>s.reportSentLate==='YES').length;
+  const overdueNow=samples.filter(s=>{const f=getReportFlag(s);return f&&f.type==='overdue';}).length;
   document.getElementById('regStats').innerHTML=`
     <div class="sc" style="border-left:4px solid #3B82F6"><div class="sl">Total samples</div><div class="sv">${total}</div></div>
     <div class="sc" style="border-left:4px solid #1D4ED8"><div class="sl">Sample received</div><div class="sv blue">${received}</div></div>
     <div class="sc" style="border-left:4px solid #B45309"><div class="sl">Test in progress</div><div class="sv amber">${testing}</div></div>
     <div class="sc" style="border-left:4px solid #065F46"><div class="sl">Test completed</div><div class="sv green">${completed}</div></div>
     <div class="sc" style="border-left:4px solid #5B21B6"><div class="sl">Report sent</div><div class="sv" style="color:#5B21B6">${report}</div></div>
-    <div class="sc" style="border-left:4px solid #9D174D"><div class="sl">Invoice forwarded</div><div class="sv" style="color:#9D174D">${invoice}</div></div>`;
+    <div class="sc" style="border-left:4px solid #9D174D"><div class="sl">Invoice forwarded</div><div class="sv" style="color:#9D174D">${invoice}</div></div>
+    ${overdueNow>0?`<div class="sc" style="border-left:4px solid #DC2626;background:#FEF2F2"><div class="sl" style="color:#991B1B">⚠ Overdue now</div><div class="sv red">${overdueNow}</div></div>`:''}
+    ${lateReports>0?`<div class="sc" style="border-left:4px solid #F59E0B;background:#FFFBEB"><div class="sl" style="color:#92400E">Late reports (historical)</div><div class="sv amber">${lateReports}</div></div>`:''}`;
 }
 
 function renderReg(){
@@ -688,7 +692,12 @@ function renderReg(){
       <td>${fmtDate(s.testEndDate)}</td>
       <td>${fmtDate(s.reportSentDate)}</td>
       <td>${s.assignedTo?`<span style="color:#534AB7;font-weight:500">${s.assignedTo}</span>`:'<span style="color:#d3d1c7">Unassigned</span>'}</td>
-      <td><span class="badge ${badge}">${s.status}</span>${flagHtml}${s.overdueComment?`<div style="font-size:10px;color:#991B1B;margin-top:2px;font-style:italic">💬 ${s.overdueComment}</div>`:''}</td>
+      <td>
+        <span class="badge ${badge}">${s.status}</span>
+        ${s.reportSentLate==='YES'?`<span style="display:inline-flex;align-items:center;gap:3px;background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;margin-left:4px">⚠ LATE +${s.daysOverdue}d</span>`:''}
+        ${flagHtml}
+        ${s.overdueComment?`<div style="font-size:10px;color:#6B7280;margin-top:3px;font-style:italic">💬 ${s.overdueComment}</div>`:''}
+      </td>
       <td><div style="display:flex;gap:4px;flex-wrap:wrap">
         <button class="abtn" onclick="openEditSample('${s.rowId}')">&#9998; Edit</button>
         <button class="abtn assign" onclick="openAssign('${s.rowId}')">&#128197; Assign</button>
@@ -831,8 +840,26 @@ function assignToCalendar(rowId){
 
 async function saveSample(rowId){
   const data=getFormData();
-  // Sample ID is optional - save without if not provided
   if(!data.client){alert('Please enter a client name to save the sample.');return;}
+
+  // Auto-record overdue info when report is marked as sent
+  if(data.status==='Report sent'||data.status==='Invoice done & forwarded'){
+    const existing=rowId?samples.find(x=>x.rowId===rowId):null;
+    const prev=existing?existing.status:'';
+    if(prev!=='Report sent'&&prev!=='Invoice done & forwarded'){
+      const flag=getReportFlag({...data,status:'Test completed'});
+      if(flag&&flag.type==='overdue'){
+        data.reportSentLate='YES';
+        data.daysOverdue=flag.days;
+        const note='Report sent '+flag.days+' working day(s) late on '+new Date().toLocaleDateString('en-GB');
+        data.overdueComment=data.overdueComment?(data.overdueComment+' | '+note):note;
+      } else {
+        data.reportSentLate='NO';
+        data.daysOverdue=0;
+      }
+    }
+  }
+
   if(rowId){const s=samples.find(x=>x.rowId===rowId);if(s)Object.assign(s,data);}
   else{samples.push({...data,rowId:'s'+Date.now()});}
   saveLocal();markUnsaved();closeModal();renderReg();
@@ -927,7 +954,9 @@ function mergeSheetData(json){
       testEndDate:s.TestEndDate||'',reportSentDate:s.ReportSentDate||'',
       assignedTo:s.AssignedTo||'',status:s.Status||'Sample received',
       notes:s.Notes||'',priority:s.Priority||'Normal',rowId:s.RowId||'',
-      overdueComment:s.OverdueComment||''
+      overdueComment:s.OverdueComment||'',
+      reportSentLate:s.ReportSentLate||'',
+      daysOverdue:s.DaysOverdue||''
     }));
   }
 
