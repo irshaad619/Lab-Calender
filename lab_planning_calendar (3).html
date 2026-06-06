@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staff Planning Calendar — Microbiology & DNA Lab</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#2c2c2a;min-height:100vh;padding:1.5rem}
+.container{max-width:1300px;margin:0 auto;background:#fff;border-radius:16px;border:1px solid #d3d1c7;padding:1.5rem}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px}
+.lab-sub{font-size:11px;color:#888780;margin-bottom:2px}
+.page-title{font-size:20px;font-weight:600;color:#2c2c2a}
+.vtoggle{display:flex;border:1px solid #d3d1c7;border-radius:8px;overflow:hidden}
+.vbtn{padding:7px 16px;font-size:13px;cursor:pointer;background:transparent;border:none;color:#888780}
+.vbtn.active{background:#f1efe8;color:#2c2c2a;font-weight:600}
+.nav-row{display:flex;align-items:center;gap:8px;margin-bottom:1.25rem}
+.nbtn{background:#fff;border:1px solid #d3d1c7;border-radius:8px;padding:6px 13px;cursor:pointer;font-size:15px;color:#5f5e5a}
+.nbtn:hover{background:#f1efe8}
+.period{font-size:15px;font-weight:600;color:#2c2c2a;min-width:200px;text-align:center}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+.sc{background:#f1efe8;border-radius:10px;padding:.85rem 1rem}
+.sl{font-size:12px;color:#888780;margin-bottom:4px}
+.sv{font-size:22px;font-weight:600;color:#2c2c2a}
+.outer{overflow-x:auto;border:1px solid #d3d1c7;border-radius:12px}
+table.cal{border-collapse:collapse;table-layout:fixed}
+th.nhd{background:#f5f4f0;font-size:11px;font-weight:600;color:#888780;padding:0 8px;height:30px;border-bottom:1px solid #d3d1c7;border-right:1px solid #d3d1c7;text-align:left;vertical-align:middle;white-space:nowrap}
+th.shd{height:30px;background:#f5f4f0;border-bottom:1px solid #d3d1c7;border-right:1px solid #eee;vertical-align:bottom;padding:0;position:relative}
+th.shd.hr{border-right:1px solid #d3d1c7}
+th.shd span{position:absolute;bottom:4px;left:2px;font-size:9px;color:#888780;white-space:nowrap;line-height:1}
+th.shd.hr span{font-size:10px;font-weight:600;color:#2c2c2a}
+td.nc{background:#fff;border-right:1px solid #d3d1c7;border-bottom:1px solid #d3d1c7;padding:6px 8px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+td.sc2{height:46px;border-right:1px solid #eee;border-bottom:1px solid #d3d1c7;background:#fff;cursor:pointer;vertical-align:top;padding:0}
+td.sc2:hover{background:#f9f8f5}
+td.sc2.hr{border-right:1px solid #d3d1c7}
+.blk{position:absolute;border-radius:4px;padding:2px 5px;font-size:10px;font-weight:600;display:flex;align-items:center;gap:3px;overflow:hidden;cursor:pointer;border:1px solid transparent;z-index:3;pointer-events:auto}
+.blk.done{opacity:.45;text-decoration:line-through}
+.blk .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.blk .t2{font-size:8px;opacity:.7;flex-shrink:0;white-space:nowrap}
+.av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.secbar{display:flex;align-items:center;justify-content:space-between;margin:1.5rem 0 .75rem}
+.sectitle{font-size:14px;font-weight:600;color:#5f5e5a}
+.pill{background:#fff;border:1px solid #d3d1c7;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;color:#2c2c2a}
+.pill:hover{background:#f1efe8}
+.slist{border:1px solid #d3d1c7;border-radius:12px;overflow:hidden}
+.sitem{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #d3d1c7;background:#fff}
+.sitem:last-child{border-bottom:none}
+.ibtn{background:none;border:1px solid #d3d1c7;border-radius:6px;cursor:pointer;color:#5f5e5a;padding:4px 9px;font-size:13px}
+.ibtn:hover{background:#f1efe8}
+.rev{margin-top:1.25rem;border:1px solid #d3d1c7;border-radius:12px;overflow:hidden}
+.rev-hd{padding:10px 14px;background:#f5f4f0;border-bottom:1px solid #d3d1c7;font-size:13px;font-weight:600;color:#2c2c2a;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.rev-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #d3d1c7;background:#fff}
+.rev-row:last-child{border-bottom:none}
+.chk{width:22px;height:22px;border-radius:50%;border:1.5px solid #d3d1c7;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;padding:0}
+.chk.done{background:#0F6E56;border-color:#0F6E56;color:#fff}
+.sync-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#f5f4f0;border-bottom:1px solid #d3d1c7;font-size:12px;color:#888780}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#d3d1c7;flex-shrink:0}
+.sync-dot.ok{background:#0F6E56}
+.sync-dot.syncing{background:#854F0B;animation:pulse 1s infinite}
+.sync-dot.err{background:#993C1D}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:14px;border:1px solid #d3d1c7;padding:1.5rem;width:360px;max-width:95vw}
+.modal h3{font-size:15px;font-weight:600;color:#2c2c2a;margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+.field{margin-bottom:.85rem}
+.field label{display:block;font-size:12px;font-weight:600;color:#5f5e5a;margin-bottom:5px}
+.field input,.field select{width:100%;font-size:13px;padding:8px 10px;border:1px solid #d3d1c7;border-radius:8px;background:#fff;color:#2c2c2a;outline:none;font-family:inherit}
+.field input:focus,.field select:focus{border-color:#534AB7;box-shadow:0 0 0 3px rgba(83,74,183,.1)}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ma{display:flex;gap:8px;margin-top:1.1rem;justify-content:flex-end;flex-wrap:wrap}
+.bp{background:#534AB7;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer}
+.bp:hover{background:#3C3489}
+.bc{background:#fff;border:1px solid #d3d1c7;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;color:#5f5e5a}
+.bc:hover{background:#f1efe8}
+.bd{background:#fff;border:1px solid #F0997B;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;color:#993C1D}
+.bd:hover{background:#FAECE7}
+select{font-size:13px;padding:7px 10px;border:1px solid #d3d1c7;border-radius:8px;background:#fff;color:#2c2c2a}
+@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="topbar">
+    <div>
+      <div class="lab-sub">Microbiology &amp; DNA Lab</div>
+      <div class="page-title">Staff Planning Calendar</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <select id="staffFilter" onchange="render()"><option value="all">All staff</option></select>
+      <div class="vtoggle">
+        <button class="vbtn active" onclick="setView('daily')" id="btn-daily">Daily</button>
+        <button class="vbtn" onclick="setView('weekly')" id="btn-weekly">Weekly</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sync-bar">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncMsg">Connecting to shared database…</span>
+    <button onclick="loadFromSheet()" style="margin-left:auto;background:#fff;border:1px solid #d3d1c7;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;color:#5f5e5a">&#x21BA; Refresh</button>
+  </div>
+
+  <div class="nav-row" style="margin-top:1rem">
+    <button class="nbtn" onclick="navigate(-1)">&#8249;</button>
+    <div class="period" id="periodLabel"></div>
+    <button class="nbtn" onclick="navigate(1)">&#8250;</button>
+    <button class="nbtn" onclick="goToday()" style="font-size:13px;padding:6px 14px;margin-left:6px">Today</button>
+  </div>
+
+  <div class="stats" id="statsRow"></div>
+  <div id="mainView"></div>
+  <div id="reviewDiv" style="margin-top:1.25rem"></div>
+
+  <div class="secbar">
+    <span class="sectitle">Staff members</span>
+    <button class="pill" onclick="openAddStaff()">+ Add staff member</button>
+  </div>
+  <div id="staffListEl"></div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────
+const API_URL = 'https://script.google.com/macros/s/AKfycbxsU-noDEpkmsrdWQx1jnISjutCW4B_lG6I0t50XiwI28osneg3DPUQi2o1jXeyYoREUw/exec';
+// ────────────────────────────────────────────────────────────────────────
+
+const SC=[{c:'#534AB7',bg:'#EEEDFE',bd:'#AFA9EC'},{c:'#185FA5',bg:'#E6F1FB',bd:'#85B7EB'},{c:'#0F6E56',bg:'#E1F5EE',bd:'#5DCAA5'},{c:'#993C1D',bg:'#FAECE7',bd:'#F0997B'},{c:'#854F0B',bg:'#FAEEDA',bd:'#EF9F27'},{c:'#72243E',bg:'#FBEAF0',bd:'#ED93B1'},{c:'#3B6D11',bg:'#EAF3DE',bd:'#97C459'},{c:'#5F5E5A',bg:'#F1EFE8',bd:'#B4B2A9'}];
+const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const SH=7,EH=18,DMINS=(EH-SH)*60,SLOT=30,SCOLS=DMINS/SLOT,SW=36,NW=114;
+
+let staff=[{id:1,name:'Dr. Patel',role:'Lab Director',ci:0},{id:2,name:'K. Lim',role:'Microbiologist',ci:1},{id:3,name:'M. Osei',role:'DNA Analyst',ci:2},{id:4,name:'J. Santos',role:'Lab Technician',ci:3},{id:5,name:'T. Nakamura',role:'PCR Specialist',ci:4}];
+let taskStore={},compStore={},recurStore=[],nextSid=6,nextTid=1,nextRid=1;
+let view='daily',offset=0;
+const today=new Date();
+
+// ── SYNC ─────────────────────────────────────────────────────────────────
+function setSyncStatus(state,msg){
+  const dot=document.getElementById('syncDot');
+  const txt=document.getElementById('syncMsg');
+  dot.className='sync-dot'+{ok:' ok',syncing:' syncing',err:' err'}[state];
+  txt.textContent=msg;
+}
+
+function jsonp(url){
+  return new Promise((resolve,reject)=>{
+    const cb='cb_'+Math.random().toString(36).slice(2);
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{
+      cleanup();reject(new Error('timeout'));
+    },15000);
+    function cleanup(){
+      clearTimeout(timer);
+      document.head.removeChild(script);
+      delete window[cb];
+    }
+    window[cb]=function(data){cleanup();resolve(data);};
+    script.src=url+(url.includes('?')?'&':'?')+'callback='+cb;
+    script.onerror=()=>{cleanup();reject(new Error('script error'));};
+    document.head.appendChild(script);
+  });
+}
+
+async function loadFromSheet(){
+  setSyncStatus('syncing','Loading shared data…');
+  try{
+    const json=await jsonp(API_URL+'?action=read');
+    if(json.data){
+      taskStore={};compStore={};recurStore=[];nextTid=1;nextRid=1;
+      json.data.forEach(row=>{
+        if(!row.Id||!row.TaskLabel)return;
+        const sid=parseInt(row.StaffId);
+        const day=row.DayKey;
+        const isRec=row.IsRecurring==='TRUE'||row.IsRecurring===true||row.IsRecurring==='1';
+        const isDone=row.IsDone==='TRUE'||row.IsDone===true||row.IsDone==='1';
+        if(isRec){
+          recurStore.push({id:row.Id,sid,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime),days:row.RecurDays||'daily'});
+          const n=parseInt(row.Id.replace('r',''))||0;if(n>=nextRid)nextRid=n+1;
+        } else {
+          const k=tk(sid,day);
+          if(!taskStore[k])taskStore[k]=[];
+          taskStore[k].push({id:row.Id,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime)});
+          if(isDone)compStore[ck(sid,day,row.Id)]=true;
+          const n=parseInt(row.Id.replace('t',''))||0;if(n>=nextTid)nextTid=n+1;
+        }
+      });
+      setSyncStatus('ok','Live — last synced '+new Date().toLocaleTimeString());
+    }
+  }catch(e){
+    setSyncStatus('err','Could not connect. Check your connection.');
+    console.error('Load error:',e);
+  }
+  render();
+}
+
+async function saveToSheet(){
+  setSyncStatus('syncing','Saving…');
+  const rows=[];
+  Object.keys(taskStore).forEach(key=>{
+    (taskStore[key]||[]).forEach(t=>{
+      const parts=key.split('|');const sid=parts[0],day=parts[1];
+      const done=compStore[ck(sid,day,t.id)]?'TRUE':'FALSE';
+      rows.push({Id:t.id,StaffId:sid,StaffName:(staff.find(s=>s.id==sid)||{name:''}).name,DayKey:day,TaskLabel:t.label,StartTime:t.sm,EndTime:t.em,IsRecurring:'FALSE',RecurDays:'',IsDone:done});
+    });
+  });
+  recurStore.forEach(r=>{
+    rows.push({Id:r.id,StaffId:r.sid,StaffName:(staff.find(s=>s.id==r.sid)||{name:''}).name,DayKey:'',TaskLabel:r.label,StartTime:r.sm,EndTime:r.em,IsRecurring:'TRUE',RecurDays:r.days,IsDone:'FALSE'});
+  });
+  try{
+    const data=encodeURIComponent(JSON.stringify({rows}));
+    await jsonp(API_URL+'?action=write&data='+data);
+    setSyncStatus('ok','Saved — '+new Date().toLocaleTimeString());
+  }catch(e){
+    setSyncStatus('err','Save failed. Check your connection.');
+    console.error('Save error:',e);
+  }
+}
+
+// Auto-refresh every 30 seconds
+setInterval(loadFromSheet,30000);
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+const sc=s=>SC[s.ci%SC.length];
+const ini=n=>n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+const isToday=d=>{const t=new Date();return d.getDate()===t.getDate()&&d.getMonth()===t.getMonth()&&d.getFullYear()===t.getFullYear();};
+function setView(v){view=v;document.getElementById('btn-daily').classList.toggle('active',v==='daily');document.getElementById('btn-weekly').classList.toggle('active',v==='weekly');render();}
+function navigate(d){offset+=d;render();}
+function goToday(){offset=0;render();}
+function getDate(){const d=new Date(today);if(view==='daily')d.setDate(d.getDate()+offset);else{const day=d.getDay()||7;d.setDate(d.getDate()-day+1+offset*7);}return d;}
+function fmt(d){return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});}
+function getDK(d){return DAYS[(d.getDay()+6)%7];}
+function filteredStaff(){const f=document.getElementById('staffFilter').value;return f==='all'?staff:staff.filter(s=>s.id==f);}
+function updateFilter(){const sel=document.getElementById('staffFilter'),cur=sel.value;sel.innerHTML='<option value="all">All staff</option>'+staff.map(s=>`<option value="${s.id}"${s.id==cur?' selected':''}>${s.name}</option>`).join('');}
+function parseT(v){if(!v&&v!==0)return null;v=String(v).trim().toLowerCase().replace(/[h.]/g,':');if(/^\d{1,2}$/.test(v))v+=':00';const p=v.split(':');const h=parseInt(p[0]||0),m=parseInt(p[1]||0);if(isNaN(h)||isNaN(m))return null;return Math.max(SH*60,Math.min(EH*60,h*60+m));}
+function fmtT(m){const h=Math.floor(m/60),mm=m%60;return `${String(h).padStart(2,'0')}h${String(mm).padStart(2,'0')}`;}
+function slotOf(m){return Math.floor((m-SH*60)/SLOT);}
+function tk(sid,d){return `${sid}|${d}`;}
+function getT(sid,d){return taskStore[tk(sid,d)]||[];}
+function setT(sid,d,a){taskStore[tk(sid,d)]=a;}
+function getRec(sid,d){return recurStore.filter(r=>r.sid===sid&&(r.days==='daily'||r.days.split(',').includes(d)));}
+function allT(sid,d){return [...getT(sid,d),...getRec(sid,d).map(r=>({id:'R'+r.id,label:r.label,sm:r.sm,em:r.em,isRec:true,rid:r.id}))];}
+function ck(sid,d,tid){return `${sid}|${d}|${tid}`;}
+function isDone(sid,d,tid){return !!compStore[ck(sid,d,tid)];}
+function toggleDone(sid,d,tid){compStore[ck(sid,d,tid)]=!compStore[ck(sid,d,tid)];saveToSheet();render();}
+
+// ── STATS ─────────────────────────────────────────────────────────────────
+function renderStats(sl){
+  const days=view==='daily'?[getDK(getDate())]:DAYS;
+  let total=0,done=0,hrs=0;
+  sl.forEach(s=>days.forEach(d=>{allT(s.id,d).forEach(t=>{total++;if(isDone(s.id,d,t.id))done++;hrs+=(t.em-t.sm)/60;});}));
+  document.getElementById('statsRow').innerHTML=`
+    <div class="sc"><div class="sl">Staff</div><div class="sv">${sl.length}</div></div>
+    <div class="sc"><div class="sl">Tasks</div><div class="sv">${total}</div></div>
+    <div class="sc"><div class="sl">Completed</div><div class="sv">${done}/${total}</div></div>
+    <div class="sc"><div class="sl">Hours</div><div class="sv">${hrs.toFixed(1)}h</div></div>`;
+}
+
+// ── DAILY TABLE ───────────────────────────────────────────────────────────
+function renderDailyTable(date,sl){
+  const day=getDK(date),totalW=NW+SCOLS*SW;
+  let h=`<div class="outer"><div style="position:relative;min-width:${totalW}px"><table class="cal" style="width:${totalW}px;min-width:${totalW}px"><thead><tr>`;
+  h+=`<th class="nhd" style="width:${NW}px;min-width:${NW}px">${fmt(date)}${isToday(date)?' <span style="background:#EEEDFE;color:#534AB7;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700">Today</span>':''}</th>`;
+  for(let i=0;i<SCOLS;i++){const mins=SH*60+i*SLOT,isHr=i%2===0;h+=`<th class="shd${isHr?' hr':''}" style="width:${SW}px;min-width:${SW}px"><span>${isHr?fmtT(mins):''}</span></th>`;}
+  h+=`</tr></thead><tbody>`;
+  let blks='';
+  sl.forEach((s,ri)=>{
+    const c=sc(s);
+    h+=`<tr><td class="nc" style="width:${NW}px;min-width:${NW}px"><div style="display:flex;align-items:center;gap:6px"><div class="av" style="background:${c.bg};color:${c.c}">${ini(s.name)}</div><div><div style="font-size:11px;font-weight:600">${s.name}</div><div style="font-size:9px;color:#888780;font-weight:400">${s.role}</div></div></div></td>`;
+    for(let i=0;i<SCOLS;i++)h+=`<td class="sc2${i%2===0?' hr':''}" style="width:${SW}px;min-width:${SW}px" onclick="openAdd(${s.id},'${day}',${i})"></td>`;
+    h+=`</tr>`;
+    allT(s.id,day).forEach(t=>{
+      const si=slotOf(t.sm),ei=slotOf(t.em),left=NW+si*SW+1,width=Math.max((ei-si)*SW-2,10);
+      const done=isDone(s.id,day,t.id);const safeId=String(t.id).replace(/'/g,"\\'");
+      blks+=`<div class="blk${done?' done':''}" data-ri="${ri}" style="left:${left}px;width:${width}px;background:${c.bg};color:${c.c};border-color:${c.bd}" onclick="openEdit(${s.id},'${day}','${safeId}')">
+        ${t.isRec?'&#x21BA;&nbsp;':''}${done?'&#x2713;&nbsp;':''}<span class="lbl">${t.label}</span><span class="t2">${fmtT(t.sm)}</span>
+      </div>`;
+    });
+  });
+  h+=`</tbody></table><div id="blkL" style="position:absolute;top:30px;left:0;pointer-events:none;width:${totalW}px">${blks}</div></div></div>`;
+  document.getElementById('mainView').innerHTML=h;
+  requestAnimationFrame(()=>{
+    const rows=document.querySelectorAll('table.cal tbody tr'),layer=document.getElementById('blkL');
+    if(!layer||!rows.length)return;
+    let top=0;
+    rows.forEach((row,ri)=>{
+      const rh=row.offsetHeight||46;
+      layer.querySelectorAll(`.blk[data-ri="${ri}"]`).forEach(b=>{b.style.top=(top+3)+'px';b.style.height=(rh-6)+'px';b.style.pointerEvents='auto';});
+      top+=rh;
+    });
+  });
+}
+
+// ── WEEKLY GRID ───────────────────────────────────────────────────────────
+function renderWeekly(startDate,sl){
+  const tw=NW+DAYS.length*130;
+  let h=`<div class="outer"><table style="border-collapse:collapse;min-width:${tw}px;width:100%"><thead><tr>`;
+  h+=`<th style="width:${NW}px;min-width:${NW}px;background:#f5f4f0;border-bottom:1px solid #d3d1c7;border-right:1px solid #d3d1c7;padding:0 8px;height:30px;font-size:11px;font-weight:600;color:#888780;text-align:left;vertical-align:middle">Staff</th>`;
+  DAYS.forEach((d,i)=>{const dd=new Date(startDate);dd.setDate(dd.getDate()+i);h+=`<th style="background:#f5f4f0;border-bottom:1px solid #d3d1c7;border-right:1px solid #eee;padding:0 8px;height:30px;font-size:11px;font-weight:600;color:#2c2c2a;text-align:left;vertical-align:middle">${d} ${dd.getDate()}${isToday(dd)?' <span style="background:#EEEDFE;color:#534AB7;font-size:9px;padding:1px 4px;border-radius:3px">today</span>':''}</th>`;});
+  h+=`</tr></thead><tbody>`;
+  sl.forEach(s=>{
+    const c=sc(s);
+    h+=`<tr><td style="width:${NW}px;min-width:${NW}px;padding:8px;border-right:1px solid #d3d1c7;border-bottom:1px solid #d3d1c7;vertical-align:middle;background:#fff"><div style="display:flex;align-items:center;gap:6px"><div class="av" style="background:${c.bg};color:${c.c}">${ini(s.name)}</div><div><div style="font-size:11px;font-weight:600">${s.name}</div><div style="font-size:9px;color:#888780">${s.role}</div></div></div></td>`;
+    DAYS.forEach(d=>{
+      const ts=allT(s.id,d);
+      h+=`<td style="border-right:1px solid #eee;border-bottom:1px solid #d3d1c7;padding:5px;vertical-align:top;min-height:46px;background:#fff;cursor:pointer;min-width:120px" onclick="openAdd(${s.id},'${d}',null)">`;
+      ts.forEach(t=>{const done=isDone(s.id,d,t.id);const safeId=String(t.id).replace(/'/g,"\\'");h+=`<div style="border-radius:3px;padding:2px 5px;font-size:10px;font-weight:600;margin-bottom:2px;display:flex;align-items:center;gap:3px;background:${c.bg};color:${c.c};border:1px solid ${c.bd};${done?'opacity:.45;text-decoration:line-through':''}cursor:pointer" onclick="event.stopPropagation();openEdit(${s.id},'${d}','${safeId}')">${t.isRec?'&#x21BA;&nbsp;':''}${done?'&#x2713;&nbsp;':''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${t.label}</span><span style="font-size:8px;opacity:.7">${fmtT(t.sm)}</span></div>`;});
+      h+=`<div style="font-size:10px;color:#aaa;margin-top:2px">+ add</div></td>`;
+    });
+    h+=`</tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  document.getElementById('mainView').innerHTML=h;
+}
+
+// ── DAILY REVIEW ──────────────────────────────────────────────────────────
+function renderReview(sl){
+  const day=getDK(getDate());
+  let all=[];sl.forEach(s=>allT(s.id,day).forEach(t=>all.push({s,t,done:isDone(s.id,day,t.id)})));
+  const dn=all.filter(x=>x.done).length;
+  const pct=all.length?Math.round(dn/all.length*100):0;
+  const barCol=pct===100?'#0F6E56':pct>=50?'#854F0B':'#534AB7';
+  let h=`<div class="rev">
+    <div class="rev-hd">
+      <span>&#x2713;&nbsp; Daily review &mdash; ${fmt(getDate())}</span>
+      <span style="font-size:12px;font-weight:400;color:#888780">${dn}/${all.length} completed &nbsp;&middot;&nbsp; ${pct}%</span>
+    </div>
+    <div style="height:5px;background:#eee"><div style="height:5px;width:${pct}%;background:${barCol};transition:width .4s"></div></div>`;
+  if(!all.length){
+    h+=`<div style="padding:1.25rem 14px;text-align:center;color:#888780;font-size:13px">No tasks scheduled today. Click any time slot above to add one.</div>`;
+  } else {
+    all.forEach(({s,t,done})=>{
+      const c=sc(s);const safeId=String(t.id).replace(/'/g,"\\'");
+      h+=`<div class="rev-row">
+        <button class="chk${done?' done':''}" onclick="toggleDone(${s.id},'${day}','${safeId}')" title="${done?'Mark pending':'Mark done'}">${done?'&#x2713;':''}</button>
+        <div class="av" style="background:${c.bg};color:${c.c};width:24px;height:24px;font-size:9px;flex-shrink:0">${ini(s.name)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:#2c2c2a;${done?'text-decoration:line-through;opacity:.5':''}overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.label}</div>
+          <div style="font-size:11px;color:#888780;margin-top:1px">${s.name} &nbsp;&middot;&nbsp; ${fmtT(t.sm)}&ndash;${fmtT(t.em)}${t.isRec?' &nbsp;&middot;&nbsp; &#x21BA; recurring':''}</div>
+        </div>
+        <span style="font-size:11px;font-weight:600;color:${done?'#0F6E56':'#888780'};flex-shrink:0;margin-left:8px">${done?'&#x2713; Done':'Pending'}</span>
+      </div>`;
+    });
+  }
+  h+=`</div>`;
+  document.getElementById('reviewDiv').innerHTML=h;
+}
+
+// ── STAFF LIST ────────────────────────────────────────────────────────────
+function renderStaffList(){
+  let h='<div class="slist">';
+  if(!staff.length)h+=`<div style="padding:1rem;font-size:13px;color:#888780;text-align:center">No staff added yet.</div>`;
+  staff.forEach(s=>{const c=sc(s);h+=`<div class="sitem"><div style="display:flex;align-items:center;gap:10px"><div class="av" style="background:${c.bg};color:${c.c}">${ini(s.name)}</div><div><div style="font-size:13px;font-weight:600">${s.name}</div><div style="font-size:11px;color:#888780">${s.role}</div></div></div><div style="display:flex;gap:6px"><button class="ibtn" onclick="openEditStaff(${s.id})">&#9998; Edit</button><button class="ibtn" onclick="delStaff(${s.id})" style="color:#993C1D;border-color:#F0997B">&#x2715; Remove</button></div></div>`;});
+  h+=`</div>`;document.getElementById('staffListEl').innerHTML=h;
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────
+function openModal(html){document.getElementById('modalBox').innerHTML=html;document.getElementById('modalOverlay').classList.add('open');setTimeout(()=>{const el=document.querySelector('#modalBox input');if(el)el.focus();},80);}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
+document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+function recOpts(){return`<option value="none">One-time only</option><option value="daily">Every day</option><option value="Mon,Tue,Wed,Thu,Fri">Weekdays (Mon–Fri)</option><option value="Mon">Every Monday</option><option value="Tue">Every Tuesday</option><option value="Wed">Every Wednesday</option><option value="Thu">Every Thursday</option><option value="Fri">Every Friday</option><option value="Sat,Sun">Weekends</option>`;}
+
+function openAdd(sid,day,slotIdx){
+  const s=staff.find(x=>x.id===sid),c=sc(s);
+  const sugSm=slotIdx!=null?SH*60+slotIdx*SLOT:SH*60+60;const sugEm=Math.min(sugSm+60,EH*60);
+  openModal(`<h3><div class="av" style="background:${c.bg};color:${c.c};width:22px;height:22px;font-size:9px">${ini(s.name)}</div>${s.name} &nbsp;&middot;&nbsp; ${day}</h3>
+    <div class="field"><label>Task name</label><input id="m-lbl" placeholder="e.g. DNA extraction"></div>
+    <div class="r2"><div class="field"><label>Start (e.g. 08h30)</label><input id="m-sm" value="${fmtT(sugSm)}"></div><div class="field"><label>End (e.g. 10h00)</label><input id="m-em" value="${fmtT(sugEm)}"></div></div>
+    <div class="field"><label>Recurring</label><select id="m-rec">${recOpts()}</select></div>
+    <div class="ma"><button class="bc" onclick="closeModal()">Cancel</button><button class="bp" onclick="doAdd(${sid},'${day}')">Add task</button></div>`);
+}
+
+function doAdd(sid,day){
+  const lbl=document.getElementById('m-lbl').value.trim();
+  const sm=parseT(document.getElementById('m-sm').value);const em=parseT(document.getElementById('m-em').value);
+  const rec=document.getElementById('m-rec').value;
+  if(!lbl){alert('Please enter a task name.');return;}
+  if(sm===null||em===null||em<=sm){alert('Please enter valid start and end times.');return;}
+  if(rec==='none'){setT(sid,day,[...getT(sid,day),{id:'t'+nextTid++,label:lbl,sm,em}]);}
+  else{recurStore.push({id:'r'+nextRid++,sid,label:lbl,sm,em,days:rec});}
+  saveToSheet();closeModal();render();
+}
+
+function openEdit(sid,day,tid){
+  const s=staff.find(x=>x.id===sid),c=sc(s);const isRec=String(tid).startsWith('R');
+  let t,ro;
+  if(isRec){ro=recurStore.find(r=>'R'+r.id===tid);if(!ro)return;t={label:ro.label,sm:ro.sm,em:ro.em};}
+  else{t=getT(sid,day).find(x=>x.id===tid);if(!t)return;}
+  const done=isDone(sid,day,tid);const safeId=String(tid).replace(/'/g,"\\'");
+  openModal(`<h3><div class="av" style="background:${c.bg};color:${c.c};width:22px;height:22px;font-size:9px">${ini(s.name)}</div>${s.name}${isRec?' &nbsp;&#x21BA; Recurring':''}</h3>
+    <div class="field"><label>Task name</label><input id="m-lbl" value="${t.label}"></div>
+    <div class="r2"><div class="field"><label>Start</label><input id="m-sm" value="${fmtT(t.sm)}"></div><div class="field"><label>End</label><input id="m-em" value="${fmtT(t.em)}"></div></div>
+    <div class="field"><label>Status</label><select id="m-status"><option value="pending"${!done?' selected':''}>Pending</option><option value="done"${done?' selected':''}>Completed &#x2713;</option></select></div>
+    <div class="ma">
+      <button class="bd" onclick="${isRec?`delRec('${ro.id}')`:`delTask(${sid},'${day}','${safeId}')`}">Delete</button>
+      <button class="bc" onclick="closeModal()">Cancel</button>
+      <button class="bp" onclick="${isRec?`saveRec('${ro.id}','${sid}','${day}','${safeId}')`:`saveTask(${sid},'${day}','${safeId}')`}">Save</button>
+    </div>`);
+}
+
+function saveTask(sid,day,tid){
+  const arr=getT(sid,day),t=arr.find(x=>x.id===tid);
+  if(t){const lbl=document.getElementById('m-lbl').value.trim();const sm=parseT(document.getElementById('m-sm').value);const em=parseT(document.getElementById('m-em').value);if(lbl)t.label=lbl;if(sm!==null)t.sm=sm;if(em!==null&&em>t.sm)t.em=em;}
+  compStore[ck(sid,day,tid)]=(document.getElementById('m-status').value==='done');
+  setT(sid,day,arr);saveToSheet();closeModal();render();
+}
+function saveRec(rid,sid,day,tid){
+  const r=recurStore.find(x=>x.id===rid);
+  if(r){const lbl=document.getElementById('m-lbl').value.trim();const sm=parseT(document.getElementById('m-sm').value);const em=parseT(document.getElementById('m-em').value);if(lbl)r.label=lbl;if(sm!==null)r.sm=sm;if(em!==null&&em>r.sm)r.em=em;}
+  compStore[ck(sid,day,tid)]=(document.getElementById('m-status').value==='done');
+  saveToSheet();closeModal();render();
+}
+function delTask(sid,day,tid){if(!confirm('Delete this task?'))return;setT(sid,day,getT(sid,day).filter(x=>x.id!==tid));saveToSheet();closeModal();render();}
+function delRec(rid){if(!confirm('Delete recurring task from all days?'))return;recurStore=recurStore.filter(r=>r.id!==rid);saveToSheet();closeModal();render();}
+
+function openAddStaff(){
+  openModal(`<h3>Add staff member</h3>
+    <div class="field"><label>Full name</label><input id="m-name" placeholder="e.g. Dr. Smith"></div>
+    <div class="field"><label>Role</label><input id="m-role" placeholder="e.g. Microbiologist"></div>
+    <div class="field"><label>Colour</label><select id="m-ci">${SC.map((c,i)=>`<option value="${i}">Colour ${i+1}</option>`).join('')}</select></div>
+    <div class="ma"><button class="bc" onclick="closeModal()">Cancel</button><button class="bp" onclick="doAddStaff()">Add</button></div>`);
+}
+function doAddStaff(){
+  const name=document.getElementById('m-name').value.trim();if(!name){alert('Enter a name.');return;}
+  staff.push({id:nextSid++,name,role:document.getElementById('m-role').value.trim()||'Staff',ci:parseInt(document.getElementById('m-ci').value)});
+  closeModal();render();
+}
+function openEditStaff(id){
+  const s=staff.find(x=>x.id===id);
+  openModal(`<h3>Edit staff member</h3>
+    <div class="field"><label>Full name</label><input id="m-name" value="${s.name}"></div>
+    <div class="field"><label>Role</label><input id="m-role" value="${s.role}"></div>
+    <div class="field"><label>Colour</label><select id="m-ci">${SC.map((c,i)=>`<option value="${i}"${i===s.ci?' selected':''}>Colour ${i+1}</option>`).join('')}</select></div>
+    <div class="ma"><button class="bc" onclick="closeModal()">Cancel</button><button class="bp" onclick="doSaveStaff(${id})">Save</button></div>`);
+}
+function doSaveStaff(id){
+  const s=staff.find(x=>x.id===id);s.name=document.getElementById('m-name').value.trim()||s.name;s.role=document.getElementById('m-role').value.trim()||s.role;s.ci=parseInt(document.getElementById('m-ci').value);
+  closeModal();render();
+}
+function delStaff(id){if(!confirm('Remove staff member?'))return;staff=staff.filter(s=>s.id!==id);closeModal();render();}
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function render(){
+  updateFilter();const d=getDate(),sl=filteredStaff();renderStats(sl);
+  if(view==='daily'){
+    document.getElementById('periodLabel').innerHTML=fmt(d)+(isToday(d)?' <span style="background:#EEEDFE;color:#534AB7;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px">Today</span>':'');
+    renderDailyTable(d,sl);renderReview(sl);
+  } else {
+    const e=new Date(d);e.setDate(d.getDate()+6);
+    document.getElementById('periodLabel').textContent=fmt(d)+' – '+fmt(e);
+    renderWeekly(d,sl);
+    document.getElementById('reviewDiv').innerHTML=`<div class="rev"><div class="rev-hd"><span>&#x2713;&nbsp; Daily review</span><span style="font-size:12px;font-weight:400;color:#888780">Switch to Daily view to see task completion</span></div></div>`;
+  }
+  renderStaffList();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+render();
+loadFromSheet();
+</script>
+</body>
+</html>
