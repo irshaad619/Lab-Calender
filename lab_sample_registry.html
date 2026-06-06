@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sample Registry — Abiolabs</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#2c2c2a;min-height:100vh;padding:1.5rem}
+.container{max-width:1400px;margin:0 auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px}
+.lab-sub{font-size:11px;color:#888780;margin-bottom:2px}
+.page-title{font-size:20px;font-weight:600;color:#2c2c2a}
+.nav-links{display:flex;gap:10px}
+.nav-link{background:#fff;border:1px solid #d3d1c7;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;color:#2c2c2a;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.nav-link:hover{background:#f1efe8}
+.nav-link.active{background:#534AB7;color:#fff;border-color:#534AB7}
+.sync-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#fff;border:1px solid #d3d1c7;border-radius:10px;margin-bottom:1.25rem;font-size:12px;color:#888780}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#d3d1c7;flex-shrink:0}
+.sync-dot.ok{background:#0F6E56}
+.sync-dot.syncing{background:#854F0B;animation:pulse 1s infinite}
+.sync-dot.err{background:#993C1D}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap}
+.search-box{flex:1;min-width:200px;padding:8px 12px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;background:#fff;color:#2c2c2a;outline:none}
+.search-box:focus{border-color:#534AB7}
+.filter-sel{padding:8px 10px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;background:#fff;color:#2c2c2a;outline:none}
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:#534AB7;color:#fff}
+.btn-primary:hover{background:#3C3489}
+.btn-outline{background:#fff;border:1px solid #d3d1c7;color:#2c2c2a}
+.btn-outline:hover{background:#f1efe8}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:1.25rem}
+@media(max-width:900px){.stats{grid-template-columns:repeat(3,1fr)}}
+.stat{background:#fff;border:1px solid #d3d1c7;border-radius:10px;padding:.75rem 1rem}
+.stat-label{font-size:11px;color:#888780;margin-bottom:4px}
+.stat-val{font-size:20px;font-weight:600;color:#2c2c2a}
+.stat-val.pending{color:#854F0B}
+.stat-val.progress{color:#185FA5}
+.stat-val.done{color:#0F6E56}
+.table-wrap{background:#fff;border:1px solid #d3d1c7;border-radius:12px;overflow:hidden;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:1100px}
+thead th{background:#f5f4f0;padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#888780;border-bottom:1px solid #d3d1c7;white-space:nowrap}
+thead th.sort{cursor:pointer}
+thead th.sort:hover{color:#534AB7}
+tbody tr{border-bottom:1px solid #f1efe8;transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:#fafaf8}
+tbody td{padding:10px 12px;font-size:13px;color:#2c2c2a;vertical-align:middle}
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge-pending{background:#FEF3C7;color:#92400E}
+.badge-received{background:#DBEAFE;color:#1E40AF}
+.badge-testing{background:#EDE9FE;color:#5B21B6}
+.badge-report{background:#D1FAE5;color:#065F46}
+.badge-completed{background:#F3F4F6;color:#374151}
+.action-btn{background:none;border:1px solid #d3d1c7;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#5f5e5a;white-space:nowrap}
+.action-btn:hover{background:#f1efe8}
+.action-btn.assign{background:#EEEDFE;border-color:#AFA9EC;color:#534AB7}
+.action-btn.assign:hover{background:#534AB7;color:#fff}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:14px;border:1px solid #d3d1c7;padding:1.5rem;width:560px;max-width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:16px;font-weight:600;color:#2c2c2a;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid.full{grid-template-columns:1fr}
+.field{margin-bottom:0}
+.field label{display:block;font-size:11px;font-weight:600;color:#5f5e5a;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px}
+.field input,.field select,.field textarea{width:100%;font-size:13px;padding:8px 10px;border:1px solid #d3d1c7;border-radius:8px;background:#fff;color:#2c2c2a;outline:none;font-family:inherit}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#534AB7;box-shadow:0 0 0 3px rgba(83,74,183,.1)}
+.field textarea{resize:vertical;min-height:60px}
+.section-hd{font-size:12px;font-weight:600;color:#534AB7;text-transform:uppercase;letter-spacing:.5px;margin:1rem 0 .5rem;padding-bottom:.5rem;border-bottom:1px solid #eee}
+.ma{display:flex;gap:8px;margin-top:1.25rem;justify-content:flex-end;flex-wrap:wrap}
+.bp{background:#534AB7;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer}
+.bp:hover{background:#3C3489}
+.bc{background:#fff;border:1px solid #d3d1c7;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;color:#5f5e5a}
+.bc:hover{background:#f1efe8}
+.bd{background:#fff;border:1px solid #F0997B;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;color:#993C1D}
+.bd:hover{background:#FAECE7}
+.empty{padding:3rem;text-align:center;color:#888780;font-size:13px}
+.priority-high{color:#993C1D;font-weight:600}
+.priority-medium{color:#854F0B;font-weight:600}
+.priority-normal{color:#2c2c2a}
+.cal-link{color:#534AB7;text-decoration:none;font-size:11px;font-weight:600}
+.cal-link:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="topbar">
+    <div>
+      <div class="lab-sub">Microbiology & DNA Lab — Abiolabs</div>
+      <div class="page-title">Sample Registry</div>
+    </div>
+    <div class="nav-links">
+      <a class="nav-link active" href="#">&#9635; Sample Registry</a>
+      <a class="nav-link" href="https://irshaad619.github.io/Lab-Calender/lab_planning_calendar%20(3).html">&#128197; Staff Calendar</a>
+    </div>
+  </div>
+
+  <div class="sync-bar">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncMsg">Connecting…</span>
+    <button onclick="loadData()" style="margin-left:auto;background:#fff;border:1px solid #d3d1c7;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;color:#5f5e5a">&#x21BA; Sync latest</button>
+  </div>
+
+  <div class="stats" id="statsRow"></div>
+
+  <div class="toolbar">
+    <input class="search-box" id="searchBox" placeholder="Search by sample ID, client, test…" oninput="renderTable()">
+    <select class="filter-sel" id="filterStatus" onchange="renderTable()">
+      <option value="">All statuses</option>
+      <option value="Pending reception">Pending reception</option>
+      <option value="Sample received">Sample received</option>
+      <option value="Testing in progress">Testing in progress</option>
+      <option value="Report sent">Report sent</option>
+      <option value="Completed / Archived">Completed / Archived</option>
+    </select>
+    <select class="filter-sel" id="filterTest" onchange="renderTable()">
+      <option value="">All test types</option>
+      <option>Microbiology</option>
+      <option>DNA / PCR</option>
+      <option>Water testing</option>
+      <option>Food testing</option>
+      <option>Environmental</option>
+      <option>Medical Device</option>
+      <option>VET</option>
+      <option>Other</option>
+    </select>
+    <button class="btn btn-primary" onclick="openAddSample()">+ New sample</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Sample ID</th>
+          <th>Client</th>
+          <th>Test Type</th>
+          <th>Matrix</th>
+          <th>Qty</th>
+          <th>Received</th>
+          <th>Test Start</th>
+          <th>Test End</th>
+          <th>Report Sent</th>
+          <th>Assigned To</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<script>
+const API_URL='https://script.google.com/macros/s/AKfycbxSigkPdoewqGUkvaUC5DvdKDSaTbmYNMUkS3yE1tUOLLLokfyGZjJRM3UfrmVsKeEjHA/exec';
+const CAL_URL='https://irshaad619.github.io/Lab-Calender/lab_planning_calendar%20(3).html';
+
+const TEST_TYPES=['Microbiology','DNA / PCR','Water testing','Food testing','Environmental','Medical Device','VET','Other'];
+const STATUSES=['Pending reception','Sample received','Testing in progress','Report sent','Completed / Archived'];
+const STATUS_BADGES={'Pending reception':'badge-pending','Sample received':'badge-received','Testing in progress':'badge-testing','Report sent':'badge-report','Completed / Archived':'badge-completed'};
+
+let samples=[];
+let staffList=[];
+
+function setSyncStatus(state,msg){
+  const dot=document.getElementById('syncDot');
+  const txt=document.getElementById('syncMsg');
+  dot.className='sync-dot'+{ok:' ok',syncing:' syncing',err:' err'}[state];
+  txt.textContent=msg;
+}
+
+function jsonp(url){
+  return new Promise((resolve,reject)=>{
+    const cb='cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{
+      try{document.head.removeChild(script);}catch(e){}
+      delete window[cb];
+      reject(new Error('timeout'));
+    },15000);
+    window[cb]=function(data){
+      clearTimeout(timer);
+      try{document.head.removeChild(script);}catch(e){}
+      delete window[cb];
+      resolve(data);
+    };
+    script.onerror=function(){
+      clearTimeout(timer);
+      try{document.head.removeChild(script);}catch(e){}
+      delete window[cb];
+      reject(new Error('script error'));
+    };
+    script.src=url+(url.includes('?')?'&':'?')+'callback='+cb+'&t='+Date.now();
+    document.head.appendChild(script);
+  });
+}
+
+async function loadData(){
+  setSyncStatus('syncing','Loading data…');
+  try{
+    const json=await jsonp(API_URL+'?action=readSamples');
+    if(json.samples!==undefined){
+      samples=json.samples.map(s=>({
+        id:s.Id||'',
+        client:s.Client||'',
+        testType:s.TestType||'',
+        matrix:s.Matrix||'',
+        quantity:s.Quantity||'',
+        receptionDate:s.ReceptionDate||'',
+        testStartDate:s.TestStartDate||'',
+        testEndDate:s.TestEndDate||'',
+        reportSentDate:s.ReportSentDate||'',
+        assignedTo:s.AssignedTo||'',
+        assignedStaffId:s.AssignedStaffId||'',
+        status:s.Status||'Pending reception',
+        notes:s.Notes||'',
+        priority:s.Priority||'Normal',
+        rowId:s.RowId||''
+      }));
+    }
+    if(json.staff!==undefined){
+      staffList=json.staff.map(s=>({
+        id:parseInt(s.Id||s.id)||0,
+        name:String(s.Name||s.name||''),
+        role:String(s.Role||s.role||'')
+      }));
+    }
+    setSyncStatus('ok','Live — synced '+new Date().toLocaleTimeString());
+  }catch(e){
+    setSyncStatus('err','Could not connect.');
+  }
+  renderStats();
+  renderTable();
+}
+
+function renderStats(){
+  const total=samples.length;
+  const pending=samples.filter(s=>s.status==='Pending reception').length;
+  const received=samples.filter(s=>s.status==='Sample received').length;
+  const testing=samples.filter(s=>s.status==='Testing in progress').length;
+  const report=samples.filter(s=>s.status==='Report sent').length;
+  const done=samples.filter(s=>s.status==='Completed / Archived').length;
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat"><div class="stat-label">Total samples</div><div class="stat-val">${total}</div></div>
+    <div class="stat"><div class="stat-label">Pending reception</div><div class="stat-val pending">${pending}</div></div>
+    <div class="stat"><div class="stat-label">Sample received</div><div class="stat-val progress">${received}</div></div>
+    <div class="stat"><div class="stat-label">Testing in progress</div><div class="stat-val progress">${testing}</div></div>
+    <div class="stat"><div class="stat-label">Report sent</div><div class="stat-val done">${report}</div></div>
+    <div class="stat"><div class="stat-label">Completed</div><div class="stat-val done">${done}</div></div>`;
+}
+
+function renderTable(){
+  const search=document.getElementById('searchBox').value.toLowerCase();
+  const filterStatus=document.getElementById('filterStatus').value;
+  const filterTest=document.getElementById('filterTest').value;
+
+  let filtered=samples.filter(s=>{
+    const matchSearch=!search||[s.id,s.client,s.testType,s.matrix,s.assignedTo].some(v=>v.toLowerCase().includes(search));
+    const matchStatus=!filterStatus||s.status===filterStatus;
+    const matchTest=!filterTest||s.testType===filterTest;
+    return matchSearch&&matchStatus&&matchTest;
+  });
+
+  const tbody=document.getElementById('tableBody');
+  if(!filtered.length){
+    tbody.innerHTML=`<tr><td colspan="12"><div class="empty">No samples found. Click "+ New sample" to add one.</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML=filtered.map(s=>{
+    const badge=STATUS_BADGES[s.status]||'badge-pending';
+    const priorityClass=s.priority==='High'?'priority-high':s.priority==='Medium'?'priority-medium':'priority-normal';
+    return `<tr>
+      <td><strong class="${priorityClass}">${s.id||'—'}</strong>${s.priority==='High'?'<span style="color:#993C1D;margin-left:4px" title="High priority">⚠</span>':''}</td>
+      <td>${s.client||'—'}</td>
+      <td>${s.testType||'—'}</td>
+      <td>${s.matrix||'—'}</td>
+      <td style="text-align:center">${s.quantity||'—'}</td>
+      <td>${fmtDate(s.receptionDate)}</td>
+      <td>${fmtDate(s.testStartDate)}</td>
+      <td>${fmtDate(s.testEndDate)}</td>
+      <td>${fmtDate(s.reportSentDate)}</td>
+      <td>${s.assignedTo?`<span style="color:#534AB7;font-weight:500">${s.assignedTo}</span>`:'<span style="color:#d3d1c7">Unassigned</span>'}</td>
+      <td><span class="badge ${badge}">${s.status}</span></td>
+      <td>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          <button class="action-btn" onclick="openEditSample('${s.rowId}')">&#9998; Edit</button>
+          <button class="action-btn assign" onclick="openAssign('${s.rowId}')">&#128197; Assign</button>
+          <button class="action-btn" onclick="deleteSample('${s.rowId}')" style="color:#993C1D;border-color:#F0997B">&#x2715;</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function fmtDate(d){
+  if(!d||d==='')return '<span style="color:#d3d1c7">—</span>';
+  try{
+    const dt=new Date(d);
+    if(isNaN(dt.getTime()))return d;
+    return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  }catch(e){return d;}
+}
+
+function isoDate(d){
+  if(!d)return '';
+  try{const dt=new Date(d);if(isNaN(dt.getTime()))return d;return dt.toISOString().split('T')[0];}catch(e){return d;}
+}
+
+function openModal(html){
+  document.getElementById('modalBox').innerHTML=html;
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(()=>{const el=document.querySelector('#modalBox input');if(el)el.focus();},80);
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
+document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+function staffOptions(selected=''){
+  return `<option value="">Unassigned</option>`+staffList.map(s=>`<option value="${s.name}"${s.name===selected?' selected':''}>${s.name} — ${s.role}</option>`).join('');
+}
+
+function sampleForm(s={}){
+  return `
+    <div class="section-hd">Sample information</div>
+    <div class="form-grid">
+      <div class="field"><label>Sample ID *</label><input id="f-id" value="${s.id||''}" placeholder="e.g. ABL-2026-001"></div>
+      <div class="field"><label>Priority</label>
+        <select id="f-priority">
+          <option${(s.priority||'Normal')==='Normal'?' selected':''}>Normal</option>
+          <option${s.priority==='Medium'?' selected':''}>Medium</option>
+          <option${s.priority==='High'?' selected':''}>High</option>
+        </select>
+      </div>
+      <div class="field"><label>Client *</label><input id="f-client" value="${s.client||''}" placeholder="Client name"></div>
+      <div class="field"><label>Test type *</label>
+        <select id="f-test">
+          ${TEST_TYPES.map(t=>`<option${s.testType===t?' selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Matrix</label><input id="f-matrix" value="${s.matrix||''}" placeholder="e.g. Water, Soil, Food"></div>
+      <div class="field"><label>Quantity</label><input id="f-qty" value="${s.quantity||''}" placeholder="e.g. 3 bottles"></div>
+    </div>
+    <div class="section-hd">Dates</div>
+    <div class="form-grid">
+      <div class="field"><label>Sample reception date</label><input type="date" id="f-reception" value="${s.receptionDate||''}"></div>
+      <div class="field"><label>Date of test (start)</label><input type="date" id="f-teststart" value="${s.testStartDate||''}"></div>
+      <div class="field"><label>Test end date</label><input type="date" id="f-testend" value="${s.testEndDate||''}"></div>
+      <div class="field"><label>Report sent date</label><input type="date" id="f-report" value="${s.reportSentDate||''}"></div>
+    </div>
+    <div class="section-hd">Assignment & status</div>
+    <div class="form-grid">
+      <div class="field"><label>Assign to technician</label><select id="f-staff">${staffOptions(s.assignedTo)}</select></div>
+      <div class="field"><label>Status</label>
+        <select id="f-status">
+          ${STATUSES.map(st=>`<option${s.status===st?' selected':''}>${st}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="section-hd">Notes</div>
+    <div class="form-grid full">
+      <div class="field"><label>Notes</label><textarea id="f-notes">${s.notes||''}</textarea></div>
+    </div>`;
+}
+
+function getFormData(){
+  return {
+    id:document.getElementById('f-id').value.trim(),
+    client:document.getElementById('f-client').value.trim(),
+    testType:document.getElementById('f-test').value,
+    matrix:document.getElementById('f-matrix').value.trim(),
+    quantity:document.getElementById('f-qty').value.trim(),
+    receptionDate:document.getElementById('f-reception').value,
+    testStartDate:document.getElementById('f-teststart').value,
+    testEndDate:document.getElementById('f-testend').value,
+    reportSentDate:document.getElementById('f-report').value,
+    assignedTo:document.getElementById('f-staff').value,
+    status:document.getElementById('f-status').value,
+    notes:document.getElementById('f-notes').value.trim(),
+    priority:document.getElementById('f-priority').value
+  };
+}
+
+function openAddSample(){
+  openModal(`<h3>&#9635; New sample</h3>${sampleForm()}
+    <div class="ma">
+      <button class="bc" onclick="closeModal()">Cancel</button>
+      <button class="bp" onclick="saveSample(null)">Save sample</button>
+    </div>`);
+}
+
+function openEditSample(rowId){
+  const s=samples.find(x=>x.rowId===rowId);
+  if(!s)return;
+  openModal(`<h3>&#9998; Edit sample — ${s.id}</h3>${sampleForm(s)}
+    <div class="ma">
+      <button class="bd" onclick="deleteSample('${rowId}')">Delete</button>
+      <button class="bc" onclick="closeModal()">Cancel</button>
+      <button class="bp" onclick="saveSample('${rowId}')">Save changes</button>
+    </div>`);
+}
+
+function openAssign(rowId){
+  const s=samples.find(x=>x.rowId===rowId);
+  if(!s)return;
+  openModal(`<h3>&#128197; Assign to calendar — ${s.id}</h3>
+    <div style="background:#f5f4f0;border-radius:8px;padding:12px 14px;margin-bottom:1rem;font-size:13px">
+      <div><strong>Client:</strong> ${s.client}</div>
+      <div><strong>Test:</strong> ${s.testType}</div>
+      <div><strong>Matrix:</strong> ${s.matrix||'—'}</div>
+    </div>
+    <div class="section-hd">Assign to technician</div>
+    <div class="form-grid">
+      <div class="field"><label>Technician</label><select id="a-staff">${staffOptions(s.assignedTo)}</select></div>
+      <div class="field"><label>Task label on calendar</label><input id="a-label" value="${s.testType} — ${s.client}" ></div>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>Date</label><input type="date" id="a-date" value="${s.testStartDate||''}"></div>
+      <div class="field"><label>Recurring</label>
+        <select id="a-rec">
+          <option value="none">One-time only</option>
+          <option value="daily">Every day</option>
+          <option value="Mon,Tue,Wed,Thu,Fri">Weekdays</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label>Start time (e.g. 08h00)</label><input id="a-start" value="08h00"></div>
+      <div class="field"><label>End time (e.g. 10h00)</label><input id="a-end" value="10h00"></div>
+    </div>
+    <div class="ma">
+      <button class="bc" onclick="closeModal()">Cancel</button>
+      <button class="bp" onclick="assignToCalendar('${rowId}')">&#128197; Add to calendar</button>
+    </div>`);
+}
+
+async function assignToCalendar(rowId){
+  const s=samples.find(x=>x.rowId===rowId);
+  if(!s)return;
+  const staffName=document.getElementById('a-staff').value;
+  const label=document.getElementById('a-label').value.trim();
+  const dateVal=document.getElementById('a-date').value;
+  const rec=document.getElementById('a-rec').value;
+  const startStr=document.getElementById('a-start').value;
+  const endStr=document.getElementById('a-end').value;
+
+  if(!staffName){alert('Please select a technician.');return;}
+  if(!label){alert('Please enter a task label.');return;}
+  if(!dateVal&&rec==='none'){alert('Please select a date.');return;}
+
+  const staffMember=staffList.find(x=>x.name===staffName);
+  if(!staffMember){alert('Staff member not found.');return;}
+
+  // Parse times
+  function parseTime(v){
+    v=String(v).trim().toLowerCase().replace(/[h.]/g,':');
+    if(/^\d{1,2}$/.test(v))v+=':00';
+    const p=v.split(':');const h=parseInt(p[0]||0),m=parseInt(p[1]||0);
+    return Math.max(7*60,Math.min(18*60,h*60+m));
+  }
+  const sm=parseTime(startStr),em=parseTime(endStr);
+  if(em<=sm){alert('End time must be after start time.');return;}
+
+  setSyncStatus('syncing','Adding to calendar…');
+
+  const payload={
+    action:'addCalendarTask',
+    task:{
+      staffId:staffMember.id,
+      staffName:staffName,
+      dayKey:dateVal,
+      label:label,
+      startTime:sm,
+      endTime:em,
+      isRecurring:rec!=='none',
+      recurDays:rec==='none'?'':rec,
+      sampleId:s.id
+    }
+  };
+
+  try{
+    const data=encodeURIComponent(JSON.stringify(payload));
+    await jsonp(API_URL+'?action=addCalendarTask&data='+data);
+    // Also update sample assigned to
+    s.assignedTo=staffName;
+    await writeSamples();
+    setSyncStatus('ok','Added to calendar ✓');
+    closeModal();
+    renderTable();
+    alert('✅ Task added to '+staffName+"'s calendar for "+label+'\n\nOpen the Staff Calendar to see it.');
+  }catch(e){
+    setSyncStatus('err','Failed to add to calendar.');
+    alert('Error adding to calendar. Please try again.');
+  }
+}
+
+async function saveSample(rowId){
+  const data=getFormData();
+  if(!data.id){alert('Please enter a Sample ID.');return;}
+  if(!data.client){alert('Please enter a client name.');return;}
+
+  if(rowId){
+    const s=samples.find(x=>x.rowId===rowId);
+    if(s)Object.assign(s,data);
+  } else {
+    const newRowId='s'+Date.now();
+    samples.push({...data,rowId:newRowId});
+  }
+
+  closeModal();
+  await writeSamples();
+  renderStats();
+  renderTable();
+}
+
+async function deleteSample(rowId){
+  if(!confirm('Delete this sample?'))return;
+  samples=samples.filter(s=>s.rowId!==rowId);
+  closeModal();
+  await writeSamples();
+  renderStats();
+  renderTable();
+}
+
+async function writeSamples(){
+  setSyncStatus('syncing','Saving…');
+  return new Promise((resolve)=>{
+    try{
+      const cb='gsave_'+Date.now();
+      const payload=JSON.stringify({samples:samples.map(s=>({
+        Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,
+        Quantity:s.quantity,ReceptionDate:s.receptionDate,TestStartDate:s.testStartDate,
+        TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,
+        AssignedTo:s.assignedTo,AssignedStaffId:s.assignedStaffId,
+        Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId
+      }))});
+
+      const iframe=document.createElement('iframe');
+      iframe.name=cb;iframe.style.display='none';
+      document.body.appendChild(iframe);
+      const form=document.createElement('form');
+      form.method='POST';form.action=API_URL+'?action=writeSamples&callback='+cb;
+      form.target=cb;form.style.display='none';
+      const input=document.createElement('input');
+      input.type='hidden';input.name='data';input.value=payload;
+      form.appendChild(input);document.body.appendChild(form);
+
+      const timer=setTimeout(()=>{
+        try{document.body.removeChild(iframe);document.body.removeChild(form);}catch(e){}
+        setSyncStatus('ok','Saved ✓');resolve();
+      },8000);
+
+      iframe.onload=function(){
+        clearTimeout(timer);
+        try{document.body.removeChild(iframe);document.body.removeChild(form);}catch(e){}
+        setSyncStatus('ok','Saved ✓ — '+new Date().toLocaleTimeString());
+        resolve();
+      };
+      form.submit();
+    }catch(err){
+      setSyncStatus('err','Save error.');resolve();
+    }
+  });
+}
+
+loadData();
+</script>
+</body>
+</html>
