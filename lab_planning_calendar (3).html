@@ -39,15 +39,7 @@ td.sc2.hr{border-right:1px solid #d3d1c7}
 .blk .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .blk .t2{font-size:8px;opacity:.7;flex-shrink:0;white-space:nowrap}
 .av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
-.secbar{display:flex;align-items:center;justify-content:space-between;margin:1.5rem 0 .75rem}
-.sectitle{font-size:14px;font-weight:600;color:#5f5e5a}
-.pill{background:#fff;border:1px solid #d3d1c7;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;color:#2c2c2a}
-.pill:hover{background:#f1efe8}
-.slist{border:1px solid #d3d1c7;border-radius:12px;overflow:hidden}
-.sitem{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #d3d1c7;background:#fff}
-.sitem:last-child{border-bottom:none}
-.ibtn{background:none;border:1px solid #d3d1c7;border-radius:6px;cursor:pointer;color:#5f5e5a;padding:4px 9px;font-size:13px}
-.ibtn:hover{background:#f1efe8}
+
 .rev{margin-top:1.25rem;border:1px solid #d3d1c7;border-radius:12px;overflow:hidden}
 .rev-hd{padding:10px 14px;background:#f5f4f0;border-bottom:1px solid #d3d1c7;font-size:13px;font-weight:600;color:#2c2c2a;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .rev-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #d3d1c7;background:#fff}
@@ -113,11 +105,7 @@ select{font-size:13px;padding:7px 10px;border:1px solid #d3d1c7;border-radius:8p
   <div id="mainView"></div>
   <div id="reviewDiv" style="margin-top:1.25rem"></div>
 
-  <div class="secbar">
-    <span class="sectitle">Staff members</span>
-    <button class="pill" onclick="openAddStaff()">+ Add staff member</button>
-  </div>
-  <div id="staffListEl"></div>
+
 </div>
 
 <div class="modal-overlay" id="modalOverlay">
@@ -126,14 +114,14 @@ select{font-size:13px;padding:7px 10px;border:1px solid #d3d1c7;border-radius:8p
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────
-const API_URL = 'https://script.google.com/macros/s/AKfycbz8tNTDyGqBULkBxbI2N4yZrXcmcFAQOBFZtkWsnzMv-2hBP4q44EbMAK0OByaLCBvryQ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyqenzRTZ2dSEh3a3s5ZqrR5sZwZljYJYRHtDoMtA9OXTCzec_pZkyofrq0aZWEHe-LmA/exec';
 // ────────────────────────────────────────────────────────────────────────
 
 const SC=[{c:'#534AB7',bg:'#EEEDFE',bd:'#AFA9EC'},{c:'#185FA5',bg:'#E6F1FB',bd:'#85B7EB'},{c:'#0F6E56',bg:'#E1F5EE',bd:'#5DCAA5'},{c:'#993C1D',bg:'#FAECE7',bd:'#F0997B'},{c:'#854F0B',bg:'#FAEEDA',bd:'#EF9F27'},{c:'#72243E',bg:'#FBEAF0',bd:'#ED93B1'},{c:'#3B6D11',bg:'#EAF3DE',bd:'#97C459'},{c:'#5F5E5A',bg:'#F1EFE8',bd:'#B4B2A9'}];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SH=7,EH=18,DMINS=(EH-SH)*60,SLOT=30,SCOLS=DMINS/SLOT,SW=36,NW=114;
 
-let staff=[{id:1,name:'Angela Govinden',role:'DNA Lab Specialist',ci:0},{id:2,name:'Hemlata Keijou',role:'Laboratory Support Officer',ci:1},{id:3,name:'Adarsh Mattan',role:'Laboratory Coordinator',ci:2},{id:4,name:'Manisha Mamoodee',role:'Quality Assitant',ci:3},{id:5,name:'New',role:'Microlab Specialist',ci:4}];
+let staff=[];
 let taskStore={},compStore={},recurStore=[],nextSid=6,nextTid=1,nextRid=1;
 let view='daily',offset=0;
 const today=new Date();
@@ -167,7 +155,11 @@ async function loadFromSheet(){
       clearTimeout(timer);
       try{document.head.removeChild(script);}catch(e){}
       delete window[cb];
-      if(json&&json.data){
+      if(json&&json.data!==undefined){
+        if(json.staff&&json.staff.length>0){
+          staff=json.staff.map(s=>({id:parseInt(s.Id||s.id)||0,name:String(s.Name||s.name||'Unknown'),role:String(s.Role||s.role||'Staff'),ci:parseInt(s.ColorIndex||s.ci)||0}));
+          updateFilter();
+        }
         taskStore={};compStore={};recurStore=[];nextTid=1;nextRid=1;
         json.data.forEach(row=>{
           if(!row.Id||!row.TaskLabel)return;
@@ -384,12 +376,7 @@ function renderReview(sl){
 }
 
 // ── STAFF LIST ────────────────────────────────────────────────────────────
-function renderStaffList(){
-  let h='<div class="slist">';
-  if(!staff.length)h+=`<div style="padding:1rem;font-size:13px;color:#888780;text-align:center">No staff added yet.</div>`;
-  staff.forEach(s=>{const c=sc(s);h+=`<div class="sitem"><div style="display:flex;align-items:center;gap:10px"><div class="av" style="background:${c.bg};color:${c.c}">${ini(s.name)}</div><div><div style="font-size:13px;font-weight:600">${s.name}</div><div style="font-size:11px;color:#888780">${s.role}</div></div></div><div style="display:flex;gap:6px"><button class="ibtn" onclick="openEditStaff(${s.id})">&#9998; Edit</button><button class="ibtn" onclick="delStaff(${s.id})" style="color:#993C1D;border-color:#F0997B">&#x2715; Remove</button></div></div>`;});
-  h+=`</div>`;document.getElementById('staffListEl').innerHTML=h;
-}
+function renderStaffList(){}
 
 // ── MODAL ─────────────────────────────────────────────────────────────────
 function openModal(html){document.getElementById('modalBox').innerHTML=html;document.getElementById('modalOverlay').classList.add('open');setTimeout(()=>{const el=document.querySelector('#modalBox input');if(el)el.focus();},80);}
@@ -451,31 +438,18 @@ function saveRec(rid,sid,day,tid){
 function delTask(sid,day,tid){if(!confirm('Delete this task?'))return;setT(sid,day,getT(sid,day).filter(x=>x.id!==tid));saveToSheet();closeModal();render();}
 function delRec(rid){if(!confirm('Delete recurring task from all days?'))return;recurStore=recurStore.filter(r=>r.id!==rid);saveToSheet();closeModal();render();}
 
-function openAddStaff(){
-  openModal(`<h3>Add staff member</h3>
-    <div class="field"><label>Full name</label><input id="m-name" placeholder="e.g. Dr. Smith"></div>
-    <div class="field"><label>Role</label><input id="m-role" placeholder="e.g. Microbiologist"></div>
-    <div class="field"><label>Colour</label><select id="m-ci">${SC.map((c,i)=>`<option value="${i}">Colour ${i+1}</option>`).join('')}</select></div>
-    <div class="ma"><button class="bc" onclick="closeModal()">Cancel</button><button class="bp" onclick="doAddStaff()">Add</button></div>`);
-}
+
 function doAddStaff(){
   const name=document.getElementById('m-name').value.trim();if(!name){alert('Enter a name.');return;}
   staff.push({id:nextSid++,name,role:document.getElementById('m-role').value.trim()||'Staff',ci:parseInt(document.getElementById('m-ci').value)});
   closeModal();render();
 }
-function openEditStaff(id){
-  const s=staff.find(x=>x.id===id);
-  openModal(`<h3>Edit staff member</h3>
-    <div class="field"><label>Full name</label><input id="m-name" value="${s.name}"></div>
-    <div class="field"><label>Role</label><input id="m-role" value="${s.role}"></div>
-    <div class="field"><label>Colour</label><select id="m-ci">${SC.map((c,i)=>`<option value="${i}"${i===s.ci?' selected':''}>Colour ${i+1}</option>`).join('')}</select></div>
-    <div class="ma"><button class="bc" onclick="closeModal()">Cancel</button><button class="bp" onclick="doSaveStaff(${id})">Save</button></div>`);
-}
+
 function doSaveStaff(id){
   const s=staff.find(x=>x.id===id);s.name=document.getElementById('m-name').value.trim()||s.name;s.role=document.getElementById('m-role').value.trim()||s.role;s.ci=parseInt(document.getElementById('m-ci').value);
   closeModal();render();
 }
-function delStaff(id){if(!confirm('Remove staff member?'))return;staff=staff.filter(s=>s.id!==id);closeModal();render();}
+
 
 // ── RENDER ────────────────────────────────────────────────────────────────
 function render(){
@@ -489,7 +463,6 @@ function render(){
     renderWeekly(d,sl);
     document.getElementById('reviewDiv').innerHTML=`<div class="rev"><div class="rev-hd"><span>&#x2713;&nbsp; Daily review</span><span style="font-size:12px;font-weight:400;color:#888780">Switch to Daily view to see task completion</span></div></div>`;
   }
-  renderStaffList();
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────
