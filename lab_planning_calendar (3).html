@@ -117,6 +117,8 @@ select{font-size:13px;padding:7px 10px;border:1px solid #d3d1c7;border-radius:8p
 const API_URL = 'https://script.google.com/macros/s/AKfycbyqenzRTZ2dSEh3a3s5ZqrR5sZwZljYJYRHtDoMtA9OXTCzec_pZkyofrq0aZWEHe-LmA/exec';
 // ────────────────────────────────────────────────────────────────────────
 
+let isSaving=false;
+let refreshTimer=null;
 const SC=[{c:'#534AB7',bg:'#EEEDFE',bd:'#AFA9EC'},{c:'#185FA5',bg:'#E6F1FB',bd:'#85B7EB'},{c:'#0F6E56',bg:'#E1F5EE',bd:'#5DCAA5'},{c:'#993C1D',bg:'#FAECE7',bd:'#F0997B'},{c:'#854F0B',bg:'#FAEEDA',bd:'#EF9F27'},{c:'#72243E',bg:'#FBEAF0',bd:'#ED93B1'},{c:'#3B6D11',bg:'#EAF3DE',bd:'#97C459'},{c:'#5F5E5A',bg:'#F1EFE8',bd:'#B4B2A9'}];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SH=7,EH=18,DMINS=(EH-SH)*60,SLOT=30,SCOLS=DMINS/SLOT,SW=36,NW=114;
@@ -135,12 +137,9 @@ function setSyncStatus(state,msg){
 }
 
 async function loadFromSheet(){
+  // Never overwrite local data while a save is in progress
+  if(isSaving){return;}
   setSyncStatus('syncing','Loading shared data…');
-  try{
-    const res=await fetch(API_URL+'?action=read',{method:'GET',mode:'no-cors'});
-  }catch(e){}
-
-  // Use JSONP as primary method
   return new Promise((resolve)=>{
     const cb='gcb_'+Date.now();
     const script=document.createElement('script');
@@ -155,6 +154,8 @@ async function loadFromSheet(){
       clearTimeout(timer);
       try{document.head.removeChild(script);}catch(e){}
       delete window[cb];
+      // Double-check not saving before overwriting data
+      if(isSaving){resolve();return;}
       if(json&&json.data!==undefined){
         if(json.staff&&json.staff.length>0){
           staff=json.staff.map(s=>({id:parseInt(s.Id||s.id)||0,name:String(s.Name||s.name||'Unknown'),role:String(s.Role||s.role||'Staff'),ci:parseInt(s.ColorIndex||s.ci)||0}));
@@ -249,8 +250,7 @@ async function saveToSheet(){
 }
 
 // Auto-refresh every 30 seconds — only when not saving
-let isSaving=false;
-let refreshTimer=setInterval(()=>{if(!isSaving)loadFromSheet();},30000);
+
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 const sc=s=>SC[s.ci%SC.length];
@@ -475,6 +475,7 @@ function render(){
 // ── INIT ──────────────────────────────────────────────────────────────────
 render();
 loadFromSheet();
+refreshTimer=setInterval(()=>{if(!isSaving)loadFromSheet();},30000);
 </script>
 </body>
 </html>
