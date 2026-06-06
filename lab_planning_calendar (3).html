@@ -759,12 +759,8 @@ function mergeSheetData(json){
     updateFilter();
   }
 
-  // Count tasks in sheet
-  const sheetTaskCount = (json.data||[]).filter(r=>r.Id&&r.TaskLabel).length;
-  const localTaskCount = Object.values(taskStore).reduce((a,v)=>a+(v||[]).length,0) + recurStore.length;
-
-  // Only overwrite if sheet has data (not empty) and has at least as many tasks
-  if(sheetTaskCount > 0 || localTaskCount === 0){
+  // Always use sheet data — it is authoritative
+  {
     taskStore={};compStore={};recurStore=[];nextTid=1;nextRid=1;
     (json.data||[]).forEach(row=>{
       if(!row.Id||!row.TaskLabel)return;
@@ -783,7 +779,7 @@ function mergeSheetData(json){
     });
   }
 
-  if(json.samples !== undefined && json.samples.length > 0){
+  if(json.samples !== undefined){
     samples = json.samples.map(s=>({
       id:s.Id||'',client:s.Client||'',testType:s.TestType||'',
       matrix:s.Matrix||'',quantity:s.Quantity||'',
@@ -799,17 +795,7 @@ function mergeSheetData(json){
 }
 
 renderCal();
-
-// Load local data first so page shows instantly
-const hadLocal = loadLocal();
-if(hadLocal){
-  renderCal();
-  renderReg();
-  renderRegStats();
-  setSyncStatus('ok','Local data loaded — syncing with server…');
-}
-
-// Then try to load from Google Sheets
+// Always load from Google Sheets — it is the single source of truth
 loadAll();
 </script>
 </body>
