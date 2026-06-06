@@ -218,7 +218,7 @@ table.reg tbody td{padding:10px 12px;font-size:13px;color:#2c2c2a;vertical-align
 </div>
 
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbzh0LK8HKgyHaPfVTLGRkqMttLZd1r2EPyIn7QIvsyU8OAr3iU0Wc--jzCwkJRC6AsISw/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbyxljbPbO3VC_3ZIi8gygiHnObDctESNDxsXlSoeqQIosVunG8XKNU8KsSYq7blrem25g/exec';
 const SC=[{c:'#534AB7',bg:'#EEEDFE',bd:'#AFA9EC'},{c:'#185FA5',bg:'#E6F1FB',bd:'#85B7EB'},{c:'#0F6E56',bg:'#E1F5EE',bd:'#5DCAA5'},{c:'#993C1D',bg:'#FAECE7',bd:'#F0997B'},{c:'#854F0B',bg:'#FAEEDA',bd:'#EF9F27'},{c:'#72243E',bg:'#FBEAF0',bd:'#ED93B1'},{c:'#3B6D11',bg:'#EAF3DE',bd:'#97C459'},{c:'#5F5E5A',bg:'#F1EFE8',bd:'#B4B2A9'}];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SH=7,EH=18,DMINS=(EH-SH)*60,SLOT=30,SCOLS=DMINS/SLOT,SW=36,NW=114;
@@ -793,7 +793,17 @@ function mergeSheetData(json){
     (json.data||[]).forEach(row=>{
       if(!row.Id||!row.TaskLabel)return;
       const sid=parseInt(String(row.StaffId||'').trim())||0;
-      const day=String(row.DayKey||'').trim();
+      // Handle DayKey in both formats: "2026-06-08" or "2026-06-07T20:00:00.000Z" (Google Sheets date conversion)
+      let day=String(row.DayKey||'').trim();
+      if(day.includes('T')){
+        // Convert ISO datetime to local date YYYY-MM-DD
+        const d=new Date(day);
+        // Use UTC+4 (Mauritius) offset to get correct date
+        const utcMs=d.getTime();
+        const offsetMs=4*60*60*1000;
+        const localD=new Date(utcMs+offsetMs);
+        day=localD.getFullYear()+'-'+String(localD.getMonth()+1).padStart(2,'0')+'-'+String(localD.getDate()).padStart(2,'0');
+      }
       const isRec=String(row.IsRecurring).toUpperCase()==='TRUE';
       const done=String(row.IsDone).toUpperCase()==='TRUE';
       if(!sid)return;
