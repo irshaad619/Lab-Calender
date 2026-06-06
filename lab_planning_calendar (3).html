@@ -3,25 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Staff Planning Calendar — Microbiology & DNA Lab</title>
+<title>Abiolabs — Lab Management</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#2c2c2a;min-height:100vh;padding:1.5rem}
-.container{max-width:1300px;margin:0 auto;background:#fff;border-radius:16px;border:1px solid #d3d1c7;padding:1.5rem}
-.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px}
-.lab-sub{font-size:11px;color:#888780;margin-bottom:2px}
-.page-title{font-size:20px;font-weight:600;color:#2c2c2a}
-.vtoggle{display:flex;border:1px solid #d3d1c7;border-radius:8px;overflow:hidden}
-.vbtn{padding:7px 16px;font-size:13px;cursor:pointer;background:transparent;border:none;color:#888780}
-.vbtn.active{background:#f1efe8;color:#2c2c2a;font-weight:600}
-.nav-row{display:flex;align-items:center;gap:8px;margin-bottom:1.25rem}
-.nbtn{background:#fff;border:1px solid #d3d1c7;border-radius:8px;padding:6px 13px;cursor:pointer;font-size:15px;color:#5f5e5a}
-.nbtn:hover{background:#f1efe8}
-.period{font-size:15px;font-weight:600;color:#2c2c2a;min-width:200px;text-align:center}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#2c2c2a;min-height:100vh}
+.app-header{background:#534AB7;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.app-title{color:#fff;font-size:17px;font-weight:600;display:flex;align-items:center;gap:10px}
+.app-sub{color:rgba(255,255,255,0.65);font-size:11px;font-weight:400}
+.tab-nav{display:flex;gap:4px}
+.tab-btn{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);transition:all .15s}
+.tab-btn:hover{background:rgba(255,255,255,0.25);color:#fff}
+.tab-btn.active{background:#fff;color:#534AB7;font-weight:600}
+.page{display:none;padding:1.25rem}
+.page.active{display:block}
+.sync-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#fff;border:1px solid #d3d1c7;border-radius:10px;margin-bottom:1.25rem;font-size:12px;color:#888780}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#d3d1c7;flex-shrink:0}
+.sync-dot.ok{background:#0F6E56}
+.sync-dot.syncing{background:#854F0B;animation:pulse 1s infinite}
+.sync-dot.err{background:#993C1D}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* ── STATS ── */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
-.sc{background:#f1efe8;border-radius:10px;padding:.85rem 1rem}
-.sl{font-size:12px;color:#888780;margin-bottom:4px}
-.sv{font-size:22px;font-weight:600;color:#2c2c2a}
+.stats6{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:1.25rem}
+@media(max-width:700px){.stats,.stats6{grid-template-columns:repeat(2,1fr)}}
+.sc{background:#fff;border:1px solid #d3d1c7;border-radius:10px;padding:.75rem 1rem}
+.sl{font-size:11px;color:#888780;margin-bottom:4px}
+.sv{font-size:20px;font-weight:600;color:#2c2c2a}
+.sv.blue{color:#185FA5}.sv.green{color:#0F6E56}.sv.amber{color:#854F0B}.sv.red{color:#993C1D}
+/* ── CALENDAR ── */
+.cal-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px}
+.vtoggle{display:flex;border:1px solid #d3d1c7;border-radius:8px;overflow:hidden}
+.vbtn{padding:6px 14px;font-size:13px;cursor:pointer;background:transparent;border:none;color:#888780}
+.vbtn.active{background:#f1efe8;color:#2c2c2a;font-weight:500}
+.nav-row{display:flex;align-items:center;gap:8px;margin-bottom:1rem}
+.nbtn{background:#fff;border:1px solid #d3d1c7;border-radius:8px;padding:6px 13px;cursor:pointer;color:#5f5e5a}
+.nbtn:hover{background:#f1efe8}
+.period{font-size:15px;font-weight:600;color:#2c2c2a;min-width:180px;text-align:center}
 .outer{overflow-x:auto;border:1px solid #d3d1c7;border-radius:12px}
 table.cal{border-collapse:collapse;table-layout:fixed}
 th.nhd{background:#f5f4f0;font-size:11px;font-weight:600;color:#888780;padding:0 8px;height:30px;border-bottom:1px solid #d3d1c7;border-right:1px solid #d3d1c7;text-align:left;vertical-align:middle;white-space:nowrap}
@@ -39,233 +56,224 @@ td.sc2.hr{border-right:1px solid #d3d1c7}
 .blk .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .blk .t2{font-size:8px;opacity:.7;flex-shrink:0;white-space:nowrap}
 .av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
-
 .rev{margin-top:1.25rem;border:1px solid #d3d1c7;border-radius:12px;overflow:hidden}
 .rev-hd{padding:10px 14px;background:#f5f4f0;border-bottom:1px solid #d3d1c7;font-size:13px;font-weight:600;color:#2c2c2a;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
 .rev-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #d3d1c7;background:#fff}
 .rev-row:last-child{border-bottom:none}
 .chk{width:22px;height:22px;border-radius:50%;border:1.5px solid #d3d1c7;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;padding:0}
 .chk.done{background:#0F6E56;border-color:#0F6E56;color:#fff}
-.sync-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#f5f4f0;border-bottom:1px solid #d3d1c7;font-size:12px;color:#888780}
-.sync-dot{width:8px;height:8px;border-radius:50%;background:#d3d1c7;flex-shrink:0}
-.sync-dot.ok{background:#0F6E56}
-.sync-dot.syncing{background:#854F0B;animation:pulse 1s infinite}
-.sync-dot.err{background:#993C1D}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center}
+/* ── REGISTRY ── */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap}
+.search-box{flex:1;min-width:180px;padding:8px 12px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;background:#fff;color:#2c2c2a;outline:none}
+.search-box:focus{border-color:#534AB7}
+.fsel{padding:8px 10px;border:1px solid #d3d1c7;border-radius:8px;font-size:13px;background:#fff;color:#2c2c2a;outline:none}
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:#534AB7;color:#fff}.btn-primary:hover{background:#3C3489}
+.tbl-wrap{background:#fff;border:1px solid #d3d1c7;border-radius:12px;overflow:hidden;overflow-x:auto}
+table.reg{width:100%;border-collapse:collapse;min-width:1000px}
+table.reg thead th{background:#f5f4f0;padding:10px 12px;text-align:left;font-size:11px;font-weight:600;color:#888780;border-bottom:1px solid #d3d1c7;white-space:nowrap}
+table.reg tbody tr{border-bottom:1px solid #f1efe8;transition:background .1s}
+table.reg tbody tr:last-child{border-bottom:none}
+table.reg tbody tr:hover{background:#fafaf8}
+table.reg tbody td{padding:10px 12px;font-size:13px;color:#2c2c2a;vertical-align:middle}
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-pending{background:#FEF3C7;color:#92400E}
+.b-received{background:#DBEAFE;color:#1E40AF}
+.b-testing{background:#EDE9FE;color:#5B21B6}
+.b-report{background:#D1FAE5;color:#065F46}
+.b-completed{background:#F3F4F6;color:#374151}
+.abtn{background:none;border:1px solid #d3d1c7;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#5f5e5a;white-space:nowrap}
+.abtn:hover{background:#f1efe8}
+.abtn.assign{background:#EEEDFE;border-color:#AFA9EC;color:#534AB7}
+.abtn.assign:hover{background:#534AB7;color:#fff}
+.empty-row td{padding:2rem;text-align:center;color:#888780;font-size:13px}
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;padding:1rem}
 .modal-overlay.open{display:flex}
-.modal{background:#fff;border-radius:14px;border:1px solid #d3d1c7;padding:1.5rem;width:360px;max-width:95vw}
-.modal h3{font-size:15px;font-weight:600;color:#2c2c2a;margin-bottom:1rem;display:flex;align-items:center;gap:8px}
-.field{margin-bottom:.85rem}
-.field label{display:block;font-size:12px;font-weight:600;color:#5f5e5a;margin-bottom:5px}
-.field input,.field select{width:100%;font-size:13px;padding:8px 10px;border:1px solid #d3d1c7;border-radius:8px;background:#fff;color:#2c2c2a;outline:none;font-family:inherit}
-.field input:focus,.field select:focus{border-color:#534AB7;box-shadow:0 0 0 3px rgba(83,74,183,.1)}
-.r2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal{background:#fff;border-radius:14px;border:1px solid #d3d1c7;padding:1.5rem;width:540px;max-width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:15px;font-weight:600;color:#2c2c2a;margin-bottom:1.1rem;display:flex;align-items:center;gap:8px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.fg.full{grid-template-columns:1fr}
+.field label{display:block;font-size:11px;font-weight:600;color:#5f5e5a;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px}
+.field input,.field select,.field textarea{width:100%;font-size:13px;padding:8px 10px;border:1px solid #d3d1c7;border-radius:8px;background:#fff;color:#2c2c2a;outline:none;font-family:inherit}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#534AB7;box-shadow:0 0 0 3px rgba(83,74,183,.1)}
+.field textarea{resize:vertical;min-height:56px}
+.shd2{font-size:11px;font-weight:600;color:#534AB7;text-transform:uppercase;letter-spacing:.5px;margin:1rem 0 .5rem;padding-bottom:.5rem;border-bottom:1px solid #eee}
 .ma{display:flex;gap:8px;margin-top:1.1rem;justify-content:flex-end;flex-wrap:wrap}
-.bp{background:#534AB7;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer}
-.bp:hover{background:#3C3489}
-.bc{background:#fff;border:1px solid #d3d1c7;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;color:#5f5e5a}
-.bc:hover{background:#f1efe8}
-.bd{background:#fff;border:1px solid #F0997B;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;color:#993C1D}
-.bd:hover{background:#FAECE7}
-select{font-size:13px;padding:7px 10px;border:1px solid #d3d1c7;border-radius:8px;background:#fff;color:#2c2c2a}
-@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}}
+.bp{background:#534AB7;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer}.bp:hover{background:#3C3489}
+.bc{background:#fff;border:1px solid #d3d1c7;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;color:#5f5e5a}.bc:hover{background:#f1efe8}
+.bd{background:#fff;border:1px solid #F0997B;border-radius:8px;padding:8px 18px;font-size:13px;cursor:pointer;color:#993C1D}.bd:hover{background:#FAECE7}
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="topbar">
-    <div>
-      <div class="lab-sub">Microbiology &amp; DNA Lab</div>
-      <div class="page-title">Staff Planning Calendar</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <select id="staffFilter" onchange="render()"><option value="all">All staff</option></select>
+
+<div class="app-header">
+  <div class="app-title">
+    &#9635; Abiolabs
+    <span class="app-sub">Microbiology & DNA Lab Management</span>
+  </div>
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('calendar')">&#128197; Staff Calendar</button>
+    <button class="tab-btn" onclick="switchTab('registry')">&#9635; Sample Registry</button>
+  </div>
+</div>
+
+<!-- SYNC BAR -->
+<div style="padding:0 1.25rem;margin-top:1.25rem">
+  <div class="sync-bar">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncMsg">Connecting to database…</span>
+    <button onclick="loadAll()" style="margin-left:auto;background:#fff;border:1px solid #d3d1c7;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;color:#5f5e5a">&#x21BA; Sync latest</button>
+  </div>
+</div>
+
+<!-- ══ CALENDAR PAGE ══ -->
+<div class="page active" id="page-calendar">
+  <div class="cal-topbar">
+    <div style="font-size:15px;font-weight:600;color:#2c2c2a">Staff Planning Calendar</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <select id="staffFilter" onchange="renderCal()"><option value="all">All staff</option></select>
       <div class="vtoggle">
         <button class="vbtn active" onclick="setView('daily')" id="btn-daily">Daily</button>
         <button class="vbtn" onclick="setView('weekly')" id="btn-weekly">Weekly</button>
       </div>
     </div>
   </div>
-
-  <div class="sync-bar">
-    <div class="sync-dot" id="syncDot"></div>
-    <span id="syncMsg">Connecting to shared database…</span>
-    <button onclick="loadFromSheet()" style="margin-left:auto;background:#fff;border:1px solid #d3d1c7;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;color:#5f5e5a">&#x21BA; Sync latest</button>
-  </div>
-
-  <div class="nav-row" style="margin-top:1rem">
+  <div class="nav-row">
     <button class="nbtn" onclick="navigate(-1)">&#8249;</button>
     <div class="period" id="periodLabel"></div>
     <button class="nbtn" onclick="navigate(1)">&#8250;</button>
-    <button class="nbtn" onclick="goToday()" style="font-size:13px;padding:6px 14px;margin-left:6px">Today</button>
+    <button class="nbtn" onclick="goToday()" style="font-size:12px;padding:5px 12px;margin-left:4px">Today</button>
   </div>
-
-  <div class="stats" id="statsRow"></div>
-  <div id="mainView"></div>
+  <div class="stats" id="calStats"></div>
+  <div id="calView"></div>
   <div id="reviewDiv" style="margin-top:1.25rem"></div>
-
-
 </div>
 
+<!-- ══ REGISTRY PAGE ══ -->
+<div class="page" id="page-registry">
+  <div style="font-size:15px;font-weight:600;color:#2c2c2a;margin-bottom:1rem">Sample Registry</div>
+  <div class="stats6" id="regStats"></div>
+  <div class="toolbar">
+    <input class="search-box" id="regSearch" placeholder="Search sample ID, client, test…" oninput="renderReg()">
+    <select class="fsel" id="regStatus" onchange="renderReg()">
+      <option value="">All statuses</option>
+      <option>Pending reception</option><option>Sample received</option>
+      <option>Testing in progress</option><option>Report sent</option>
+      <option>Completed / Archived</option>
+    </select>
+    <select class="fsel" id="regTest" onchange="renderReg()">
+      <option value="">All test types</option>
+      <option>Microbiology</option><option>DNA / PCR</option><option>Water testing</option>
+      <option>Food testing</option><option>Environmental</option>
+      <option>Medical Device</option><option>VET</option><option>Other</option>
+    </select>
+    <button class="btn btn-primary" onclick="openAddSample()">+ New sample</button>
+  </div>
+  <div class="tbl-wrap">
+    <table class="reg">
+      <thead><tr>
+        <th>Sample ID</th><th>Client</th><th>Test Type</th><th>Matrix</th><th>Qty</th>
+        <th>Received</th><th>Test Start</th><th>Test End</th><th>Report Sent</th>
+        <th>Assigned To</th><th>Status</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="regBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal" id="modalBox"></div>
 </div>
 
 <script>
-// ── CONFIG ──────────────────────────────────────────────────────────────
-const API_URL = 'https://script.google.com/macros/s/AKfycbxSigkPdoewqGUkvaUC5DvdKDSaTbmYNMUkS3yE1tUOLLLokfyGZjJRM3UfrmVsKeEjHA/exec';
-// ────────────────────────────────────────────────────────────────────────
-
+const API_URL='https://script.google.com/macros/s/AKfycbyTt6baEnyGlJf0XMzXGuaBJR40W01aPbASzgufRrSTN-JOTMl2Zal1-HasjEmrI3OXMg/exec';
 const SC=[{c:'#534AB7',bg:'#EEEDFE',bd:'#AFA9EC'},{c:'#185FA5',bg:'#E6F1FB',bd:'#85B7EB'},{c:'#0F6E56',bg:'#E1F5EE',bd:'#5DCAA5'},{c:'#993C1D',bg:'#FAECE7',bd:'#F0997B'},{c:'#854F0B',bg:'#FAEEDA',bd:'#EF9F27'},{c:'#72243E',bg:'#FBEAF0',bd:'#ED93B1'},{c:'#3B6D11',bg:'#EAF3DE',bd:'#97C459'},{c:'#5F5E5A',bg:'#F1EFE8',bd:'#B4B2A9'}];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SH=7,EH=18,DMINS=(EH-SH)*60,SLOT=30,SCOLS=DMINS/SLOT,SW=36,NW=114;
+const TEST_TYPES=['Microbiology','DNA / PCR','Water testing','Food testing','Environmental','Medical Device','VET','Other'];
+const STATUSES=['Pending reception','Sample received','Testing in progress','Report sent','Completed / Archived'];
+const SBADGE={'Pending reception':'b-pending','Sample received':'b-received','Testing in progress':'b-testing','Report sent':'b-report','Completed / Archived':'b-completed'};
 
-let staff=[];
-let taskStore={},compStore={},recurStore=[],nextSid=6,nextTid=1,nextRid=1;
-let view='daily',offset=0;
+// ── STATE ─────────────────────────────────────────────────────────────────
+let staff=[],taskStore={},compStore={},recurStore=[],samples=[];
+let nextTid=1,nextRid=1,view='daily',offset=0;
 const today=new Date();
 
-// ── SYNC ─────────────────────────────────────────────────────────────────
-function setSyncStatus(state,msg){
-  const dot=document.getElementById('syncDot');
-  const txt=document.getElementById('syncMsg');
-  dot.className='sync-dot'+{ok:' ok',syncing:' syncing',err:' err'}[state];
-  txt.textContent=msg;
+// ── TAB SWITCH ─────────────────────────────────────────────────────────────
+function switchTab(tab){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  event.currentTarget.classList.add('active');
 }
 
-async function loadFromSheet(){
-  // Never overwrite local data while a save is in progress
-  setSyncStatus('syncing','Loading shared data…');
-  return new Promise((resolve)=>{
-    const cb='gcb_'+Date.now();
+// ── SYNC ───────────────────────────────────────────────────────────────────
+function setSyncStatus(state,msg){
+  document.getElementById('syncDot').className='sync-dot'+{ok:' ok',syncing:' syncing',err:' err'}[state];
+  document.getElementById('syncMsg').textContent=msg;
+}
+
+function jsonp(url){
+  return new Promise((resolve,reject)=>{
+    const cb='cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
     const script=document.createElement('script');
-    const timer=setTimeout(()=>{
-      try{document.head.removeChild(script);}catch(e){}
-      delete window[cb];
-      setSyncStatus('err','Connection timed out. Retrying…');
-      render();
-      resolve();
-    },12000);
-    window[cb]=function(json){
-      clearTimeout(timer);
-      try{document.head.removeChild(script);}catch(e){}
-      delete window[cb];
-      // Double-check not saving before overwriting data
-      if(json&&json.data!==undefined){
-        if(json.staff&&json.staff.length>0){
-          staff=json.staff.map(s=>({id:parseInt(s.Id||s.id)||0,name:String(s.Name||s.name||'Unknown'),role:String(s.Role||s.role||'Staff'),ci:parseInt(s.ColorIndex||s.ci)||0}));
-          updateFilter();
-        }
-        taskStore={};compStore={};recurStore=[];nextTid=1;nextRid=1;
-        json.data.forEach(row=>{
-          if(!row.Id||!row.TaskLabel)return;
-          const sid=parseInt(row.StaffId);
-          const day=row.DayKey;
-          const isRec=String(row.IsRecurring).toUpperCase()==='TRUE';
-          const done=String(row.IsDone).toUpperCase()==='TRUE';
-          if(isRec){
-            recurStore.push({id:row.Id,sid,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime),days:row.RecurDays||'daily'});
-            const n=parseInt(String(row.Id).replace('r',''))||0;if(n>=nextRid)nextRid=n+1;
-          } else {
-            const k=tk(sid,day);
-            if(!taskStore[k])taskStore[k]=[];
-            taskStore[k].push({id:row.Id,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime)});
-            if(done)compStore[ck(sid,day,row.Id)]=true;
-            const n=parseInt(String(row.Id).replace('t',''))||0;if(n>=nextTid)nextTid=n+1;
-          }
-        });
-        setSyncStatus('ok','Live — last synced '+new Date().toLocaleTimeString());
-      }
-      render();
-      resolve();
-    };
-    script.onerror=function(){
-      clearTimeout(timer);
-      try{document.head.removeChild(script);}catch(e){}
-      delete window[cb];
-      setSyncStatus('err','Could not connect. Check your internet.');
-      render();
-      resolve();
-    };
-    script.src=API_URL+'?action=read&callback='+cb+'&t='+Date.now();
+    const timer=setTimeout(()=>{try{document.head.removeChild(script);}catch(e){}delete window[cb];reject(new Error('timeout'));},15000);
+    window[cb]=function(data){clearTimeout(timer);try{document.head.removeChild(script);}catch(e){}delete window[cb];resolve(data);};
+    script.onerror=function(){clearTimeout(timer);try{document.head.removeChild(script);}catch(e){}delete window[cb];reject(new Error('error'));};
+    script.src=url+(url.includes('?')?'&':'?')+'callback='+cb+'&t='+Date.now();
     document.head.appendChild(script);
   });
 }
 
-async function saveToSheet(){
-  setSyncStatus('syncing','Saving…');
-  const rows=[];
-  Object.keys(taskStore).forEach(key=>{
-    (taskStore[key]||[]).forEach(t=>{
-      const parts=key.split('|');const sid=parts[0],day=parts[1];
-      const done=compStore[ck(sid,day,t.id)]?'TRUE':'FALSE';
-      rows.push({Id:t.id,StaffId:sid,StaffName:(staff.find(s=>s.id==sid)||{name:''}).name,DayKey:day,TaskLabel:t.label,StartTime:t.sm,EndTime:t.em,IsRecurring:'FALSE',RecurDays:'',IsDone:done});
-    });
-  });
-  recurStore.forEach(r=>{
-    rows.push({Id:r.id,StaffId:r.sid,StaffName:(staff.find(s=>s.id==r.sid)||{name:''}).name,DayKey:'',TaskLabel:r.label,StartTime:r.sm,EndTime:r.em,IsRecurring:'TRUE',RecurDays:r.days,IsDone:'FALSE'});
-  });
-
-  // Use hidden iframe + form POST to avoid URL length limits
-  return new Promise((resolve)=>{
-    try{
-      const cb='gsave_'+Date.now();
-      const payload=JSON.stringify({rows});
-
-      // Create hidden iframe to receive response
-      const iframe=document.createElement('iframe');
-      iframe.name=cb;
-      iframe.style.display='none';
-      document.body.appendChild(iframe);
-
-      // Create form to POST data
-      const form=document.createElement('form');
-      form.method='POST';
-      form.action=API_URL+'?callback='+cb+'&action=write';
-      form.target=cb;
-      form.style.display='none';
-
-      const input=document.createElement('input');
-      input.type='hidden';
-      input.name='data';
-      input.value=payload;
-      form.appendChild(input);
-      document.body.appendChild(form);
-
-      const timer=setTimeout(()=>{
-        try{document.body.removeChild(iframe);document.body.removeChild(form);}catch(e){}
-        // Even if timeout, reload to check if it saved
-        setSyncStatus('ok','Saved — '+new Date().toLocaleTimeString());
-        resolve();
-      },10000);
-
-      iframe.onload=function(){
-        clearTimeout(timer);
-        try{document.body.removeChild(iframe);document.body.removeChild(form);}catch(e){}
-        setSyncStatus('ok','Saved — '+new Date().toLocaleTimeString());
-        // Don't reload immediately - keep local data, let next auto-refresh sync
-        resolve();
-      };
-
-      form.submit();
-    }catch(err){
-      setSyncStatus('err','Save error: '+err.message);
-      resolve();
+async function loadAll(){
+  setSyncStatus('syncing','Loading data…');
+  try{
+    const json=await jsonp(API_URL+'?action=readAll');
+    if(json.staff&&json.staff.length>0){
+      staff=json.staff.map(s=>({id:parseInt(s.Id||s.id)||0,name:String(s.Name||s.name||''),role:String(s.Role||s.role||''),ci:parseInt(s.ColorIndex||s.ci)||0}));
+      updateFilter();
     }
-  });
+    if(json.data!==undefined){
+      taskStore={};compStore={};recurStore=[];nextTid=1;nextRid=1;
+      json.data.forEach(row=>{
+        if(!row.Id||!row.TaskLabel)return;
+        const sid=parseInt(row.StaffId),day=row.DayKey;
+        const isRec=String(row.IsRecurring).toUpperCase()==='TRUE';
+        const done=String(row.IsDone).toUpperCase()==='TRUE';
+        if(isRec){
+          recurStore.push({id:row.Id,sid,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime),days:row.RecurDays||'daily'});
+          const n=parseInt(String(row.Id).replace('r',''))||0;if(n>=nextRid)nextRid=n+1;
+        } else {
+          const k=tk(sid,day);if(!taskStore[k])taskStore[k]=[];
+          taskStore[k].push({id:row.Id,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime)});
+          if(done)compStore[ck(sid,day,row.Id)]=true;
+          const n=parseInt(String(row.Id).replace('t',''))||0;if(n>=nextTid)nextTid=n+1;
+        }
+      });
+    }
+    if(json.samples!==undefined){
+      samples=json.samples.map(s=>({
+        id:s.Id||'',client:s.Client||'',testType:s.TestType||'',matrix:s.Matrix||'',
+        quantity:s.Quantity||'',receptionDate:s.ReceptionDate||'',testStartDate:s.TestStartDate||'',
+        testEndDate:s.TestEndDate||'',reportSentDate:s.ReportSentDate||'',
+        assignedTo:s.AssignedTo||'',status:s.Status||'Pending reception',
+        notes:s.Notes||'',priority:s.Priority||'Normal',rowId:s.RowId||''
+      }));
+    }
+    setSyncStatus('ok','Live — synced '+new Date().toLocaleTimeString());
+  }catch(e){setSyncStatus('err','Could not connect.');}
+  renderCal();renderReg();renderRegStats();
 }
 
-// Auto-refresh every 30 seconds — only when not saving
-
-
-// ── HELPERS ───────────────────────────────────────────────────────────────
+// ── HELPERS ────────────────────────────────────────────────────────────────
 const sc=s=>SC[s.ci%SC.length];
 const ini=n=>n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
 const isToday=d=>{const t=new Date();return d.getDate()===t.getDate()&&d.getMonth()===t.getMonth()&&d.getFullYear()===t.getFullYear();};
-function setView(v){view=v;document.getElementById('btn-daily').classList.toggle('active',v==='daily');document.getElementById('btn-weekly').classList.toggle('active',v==='weekly');render();}
-function navigate(d){offset+=d;render();}
-function goToday(){offset=0;render();}
+function setView(v){view=v;document.getElementById('btn-daily').classList.toggle('active',v==='daily');document.getElementById('btn-weekly').classList.toggle('active',v==='weekly');renderCal();}
+function navigate(d){offset+=d;renderCal();}
+function goToday(){offset=0;renderCal();}
 function getDate(){const d=new Date(today);if(view==='daily')d.setDate(d.getDate()+offset);else{const day=d.getDay()||7;d.setDate(d.getDate()-day+1+offset*7);}return d;}
 function fmt(d){return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});}
 function getDK(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -282,44 +290,54 @@ function getRec(sid,dk){const p=dk.split('-');const dn=DAYS[(new Date(parseInt(p
 function allT(sid,d){return [...getT(sid,d),...getRec(sid,d).map(r=>({id:'R'+r.id,label:r.label,sm:r.sm,em:r.em,isRec:true,rid:r.id}))];}
 function ck(sid,d,tid){return `${sid}|${d}|${tid}`;}
 function isDone(sid,d,tid){return !!compStore[ck(sid,d,tid)];}
-function toggleDone(sid,d,tid){compStore[ck(sid,d,tid)]=!compStore[ck(sid,d,tid)];saveToSheet();render();}
+function toggleDone(sid,d,tid){compStore[ck(sid,d,tid)]=!compStore[ck(sid,d,tid)];saveTasks();renderCal();}
+function fmtDate(d){if(!d||d==='')return '<span style="color:#d3d1c7">—</span>';try{const dt=new Date(d);if(isNaN(dt.getTime()))return d;return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return d;}}
 
-// ── STATS ─────────────────────────────────────────────────────────────────
-function renderStats(sl){
+// ── CALENDAR RENDER ────────────────────────────────────────────────────────
+function renderCal(){
+  updateFilter();
+  const d=getDate(),sl=filteredStaff();
   const d0=getDate();
   const days=view==='daily'?[getDK(d0)]:(()=>{const a=[];for(let i=0;i<7;i++){const x=new Date(d0);x.setDate(x.getDate()+i);a.push(getDK(x));}return a;})();
   let total=0,done=0,hrs=0;
-  sl.forEach(s=>days.forEach(d=>{allT(s.id,d).forEach(t=>{total++;if(isDone(s.id,d,t.id))done++;hrs+=(t.em-t.sm)/60;});}));
-  document.getElementById('statsRow').innerHTML=`
+  sl.forEach(s=>days.forEach(dk=>{allT(s.id,dk).forEach(t=>{total++;if(isDone(s.id,dk,t.id))done++;hrs+=(t.em-t.sm)/60;});}));
+  document.getElementById('calStats').innerHTML=`
     <div class="sc"><div class="sl">Staff</div><div class="sv">${sl.length}</div></div>
     <div class="sc"><div class="sl">Tasks</div><div class="sv">${total}</div></div>
-    <div class="sc"><div class="sl">Completed</div><div class="sv">${done}/${total}</div></div>
+    <div class="sc"><div class="sl">Completed</div><div class="sv green">${done}/${total}</div></div>
     <div class="sc"><div class="sl">Hours</div><div class="sv">${hrs.toFixed(1)}h</div></div>`;
+  if(view==='daily'){
+    document.getElementById('periodLabel').innerHTML=fmt(d)+(isToday(d)?' <span style="background:#EEEDFE;color:#534AB7;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px">Today</span>':'');
+    renderDailyTable(d,sl);renderReview(sl);
+  } else {
+    const e=new Date(d);e.setDate(d.getDate()+6);
+    document.getElementById('periodLabel').textContent=fmt(d)+' – '+fmt(e);
+    renderWeekly(d,sl);
+    document.getElementById('reviewDiv').innerHTML='';
+  }
 }
 
-// ── DAILY TABLE ───────────────────────────────────────────────────────────
 function renderDailyTable(date,sl){
-  const day=getDK(date),totalW=NW+SCOLS*SW; // day is now ISO date
+  const day=getDK(date),totalW=NW+SCOLS*SW;
   let h=`<div class="outer"><div style="position:relative;min-width:${totalW}px"><table class="cal" style="width:${totalW}px;min-width:${totalW}px"><thead><tr>`;
-  h+=`<th class="nhd" style="width:${NW}px;min-width:${NW}px">${fmt(date)}${isToday(date)?' <span style="background:#EEEDFE;color:#534AB7;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700">Today</span>':''}</th>`;
+  h+=`<th class="nhd" style="width:${NW}px;min-width:${NW}px">${fmt(date)}</th>`;
   for(let i=0;i<SCOLS;i++){const mins=SH*60+i*SLOT,isHr=i%2===0;h+=`<th class="shd${isHr?' hr':''}" style="width:${SW}px;min-width:${SW}px"><span>${isHr?fmtT(mins):''}</span></th>`;}
   h+=`</tr></thead><tbody>`;
   let blks='';
   sl.forEach((s,ri)=>{
     const c=sc(s);
-    h+=`<tr><td class="nc" style="width:${NW}px;min-width:${NW}px"><div style="display:flex;align-items:center;gap:6px"><div class="av" style="background:${c.bg};color:${c.c}">${ini(s.name)}</div><div><div style="font-size:11px;font-weight:600">${s.name}</div><div style="font-size:9px;color:#888780;font-weight:400">${s.role}</div></div></div></td>`;
+    h+=`<tr><td class="nc" style="width:${NW}px;min-width:${NW}px"><div style="display:flex;align-items:center;gap:6px"><div class="av" style="background:${c.bg};color:${c.c}">${ini(s.name)}</div><div><div style="font-size:11px;font-weight:600">${s.name}</div><div style="font-size:9px;color:#888780">${s.role}</div></div></div></td>`;
     for(let i=0;i<SCOLS;i++)h+=`<td class="sc2${i%2===0?' hr':''}" style="width:${SW}px;min-width:${SW}px" onclick="openAdd(${s.id},'${day}',${i})"></td>`;
     h+=`</tr>`;
     allT(s.id,day).forEach(t=>{
       const si=slotOf(t.sm),ei=slotOf(t.em),left=NW+si*SW+1,width=Math.max((ei-si)*SW-2,10);
       const done=isDone(s.id,day,t.id);const safeId=String(t.id).replace(/'/g,"\\'");
       blks+=`<div class="blk${done?' done':''}" data-ri="${ri}" style="left:${left}px;width:${width}px;background:${c.bg};color:${c.c};border-color:${c.bd}" onclick="openEdit(${s.id},'${day}','${safeId}')">
-        ${t.isRec?'&#x21BA;&nbsp;':''}${done?'&#x2713;&nbsp;':''}<span class="lbl">${t.label}</span><span class="t2">${fmtT(t.sm)}</span>
-      </div>`;
+        ${t.isRec?'&#x21BA;&nbsp;':''}${done?'&#x2713;&nbsp;':''}<span class="lbl">${t.label}</span><span class="t2">${fmtT(t.sm)}</span></div>`;
     });
   });
   h+=`</tbody></table><div id="blkL" style="position:absolute;top:30px;left:0;pointer-events:none;width:${totalW}px">${blks}</div></div></div>`;
-  document.getElementById('mainView').innerHTML=h;
+  document.getElementById('calView').innerHTML=h;
   requestAnimationFrame(()=>{
     const rows=document.querySelectorAll('table.cal tbody tr'),layer=document.getElementById('blkL');
     if(!layer||!rows.length)return;
@@ -332,80 +350,96 @@ function renderDailyTable(date,sl){
   });
 }
 
-// ── WEEKLY GRID ───────────────────────────────────────────────────────────
 function renderWeekly(startDate,sl){
   const tw=NW+DAYS.length*130;
   const wDates=[];for(let i=0;i<7;i++){const x=new Date(startDate);x.setDate(x.getDate()+i);wDates.push(x);}
   let h=`<div class="outer"><table style="border-collapse:collapse;min-width:${tw}px;width:100%"><thead><tr>`;
   h+=`<th style="width:${NW}px;min-width:${NW}px;background:#f5f4f0;border-bottom:1px solid #d3d1c7;border-right:1px solid #d3d1c7;padding:0 8px;height:30px;font-size:11px;font-weight:600;color:#888780;text-align:left;vertical-align:middle">Staff</th>`;
-  wDates.forEach((dd)=>{h+=`<th style="background:#f5f4f0;border-bottom:1px solid #d3d1c7;border-right:1px solid #eee;padding:0 8px;height:30px;font-size:11px;font-weight:600;color:#2c2c2a;text-align:left;vertical-align:middle">${DAYS[(dd.getDay()+6)%7]} ${dd.getDate()}${isToday(dd)?' <span style="background:#EEEDFE;color:#534AB7;font-size:9px;padding:1px 4px;border-radius:3px">today</span>':''}</th>`;});
+  wDates.forEach(dd=>{h+=`<th style="background:#f5f4f0;border-bottom:1px solid #d3d1c7;border-right:1px solid #eee;padding:0 8px;height:30px;font-size:11px;font-weight:600;color:#2c2c2a;text-align:left;vertical-align:middle">${DAYS[(dd.getDay()+6)%7]} ${dd.getDate()}${isToday(dd)?' <span style="background:#EEEDFE;color:#534AB7;font-size:9px;padding:1px 4px;border-radius:3px">today</span>':''}</th>`;});
   h+=`</tr></thead><tbody>`;
   sl.forEach(s=>{
     const c=sc(s);
     h+=`<tr><td style="width:${NW}px;min-width:${NW}px;padding:8px;border-right:1px solid #d3d1c7;border-bottom:1px solid #d3d1c7;vertical-align:middle;background:#fff"><div style="display:flex;align-items:center;gap:6px"><div class="av" style="background:${c.bg};color:${c.c}">${ini(s.name)}</div><div><div style="font-size:11px;font-weight:600">${s.name}</div><div style="font-size:9px;color:#888780">${s.role}</div></div></div></td>`;
-    wDates.forEach((wDate,wi)=>{
-      const d=getDK(wDate);
-      const ts=allT(s.id,d);
-      h+=`<td style="border-right:1px solid #eee;border-bottom:1px solid #d3d1c7;padding:5px;vertical-align:top;min-height:46px;background:#fff;cursor:pointer;min-width:120px" onclick="openAdd(${s.id},'${d}',null)">`;  // d is ISO date
-      ts.forEach(t=>{const done=isDone(s.id,d,t.id);const safeId=String(t.id).replace(/'/g,"\\'");h+=`<div style="border-radius:3px;padding:2px 5px;font-size:10px;font-weight:600;margin-bottom:2px;display:flex;align-items:center;gap:3px;background:${c.bg};color:${c.c};border:1px solid ${c.bd};${done?'opacity:.45;text-decoration:line-through':''}cursor:pointer" onclick="event.stopPropagation();openEdit(${s.id},'${d}','${safeId}')">${t.isRec?'&#x21BA;&nbsp;':''}${done?'&#x2713;&nbsp;':''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${t.label}</span><span style="font-size:8px;opacity:.7">${fmtT(t.sm)}</span></div>`;});
+    wDates.forEach(dd=>{
+      const dk=getDK(dd);const ts=allT(s.id,dk);
+      h+=`<td style="border-right:1px solid #eee;border-bottom:1px solid #d3d1c7;padding:5px;vertical-align:top;min-height:46px;background:#fff;cursor:pointer;min-width:120px" onclick="openAdd(${s.id},'${dk}',null)">`;
+      ts.forEach(t=>{const done=isDone(s.id,dk,t.id);const safeId=String(t.id).replace(/'/g,"\\'");
+        h+=`<div style="border-radius:3px;padding:2px 5px;font-size:10px;font-weight:600;margin-bottom:2px;display:flex;align-items:center;gap:3px;background:${c.bg};color:${c.c};border:1px solid ${c.bd};${done?'opacity:.45;text-decoration:line-through':''}cursor:pointer" onclick="event.stopPropagation();openEdit(${s.id},'${dk}','${safeId}')">${t.isRec?'&#x21BA;&nbsp;':''}${done?'&#x2713;&nbsp;':''}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${t.label}</span><span style="font-size:8px;opacity:.7">${fmtT(t.sm)}</span></div>`;});
       h+=`<div style="font-size:10px;color:#aaa;margin-top:2px">+ add</div></td>`;
     });
     h+=`</tr>`;
   });
   h+=`</tbody></table></div>`;
-  document.getElementById('mainView').innerHTML=h;
+  document.getElementById('calView').innerHTML=h;
 }
 
-// ── DAILY REVIEW ──────────────────────────────────────────────────────────
 function renderReview(sl){
-  const day=getDK(getDate());
-  let all=[];sl.forEach(s=>allT(s.id,day).forEach(t=>all.push({s,t,done:isDone(s.id,day,t.id)})));
+  const day=getDK(getDate());let all=[];
+  sl.forEach(s=>allT(s.id,day).forEach(t=>all.push({s,t,done:isDone(s.id,day,t.id)})));
   const dn=all.filter(x=>x.done).length;
   const pct=all.length?Math.round(dn/all.length*100):0;
   const barCol=pct===100?'#0F6E56':pct>=50?'#854F0B':'#534AB7';
-  let h=`<div class="rev">
-    <div class="rev-hd">
-      <span>&#x2713;&nbsp; Daily review &mdash; ${fmt(getDate())}</span>
-      <span style="font-size:12px;font-weight:400;color:#888780">${dn}/${all.length} completed &nbsp;&middot;&nbsp; ${pct}%</span>
-    </div>
-    <div style="height:5px;background:#eee"><div style="height:5px;width:${pct}%;background:${barCol};transition:width .4s"></div></div>`;
-  if(!all.length){
-    h+=`<div style="padding:1.25rem 14px;text-align:center;color:#888780;font-size:13px">No tasks scheduled today. Click any time slot above to add one.</div>`;
-  } else {
-    all.forEach(({s,t,done})=>{
-      const c=sc(s);const safeId=String(t.id).replace(/'/g,"\\'");
-      h+=`<div class="rev-row">
-        <button class="chk${done?' done':''}" onclick="toggleDone(${s.id},'${day}','${safeId}')" title="${done?'Mark pending':'Mark done'}">${done?'&#x2713;':''}</button>
-        <div class="av" style="background:${c.bg};color:${c.c};width:24px;height:24px;font-size:9px;flex-shrink:0">${ini(s.name)}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;color:#2c2c2a;${done?'text-decoration:line-through;opacity:.5':''}overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.label}</div>
-          <div style="font-size:11px;color:#888780;margin-top:1px">${s.name} &nbsp;&middot;&nbsp; ${fmtT(t.sm)}&ndash;${fmtT(t.em)}${t.isRec?' &nbsp;&middot;&nbsp; &#x21BA; recurring':''}</div>
-        </div>
-        <span style="font-size:11px;font-weight:600;color:${done?'#0F6E56':'#888780'};flex-shrink:0;margin-left:8px">${done?'&#x2713; Done':'Pending'}</span>
-      </div>`;
-    });
-  }
-  h+=`</div>`;
-  document.getElementById('reviewDiv').innerHTML=h;
+  let h=`<div class="rev"><div class="rev-hd"><span>&#x2713; Daily review — ${fmt(getDate())}</span><span style="font-size:12px;font-weight:400;color:#888780">${dn}/${all.length} completed · ${pct}%</span></div>`;
+  h+=`<div style="height:5px;background:#eee"><div style="height:5px;width:${pct}%;background:${barCol};transition:width .4s"></div></div>`;
+  if(!all.length){h+=`<div style="padding:1.25rem;text-align:center;color:#888780;font-size:13px">No tasks today. Click any time slot to add one.</div>`;}
+  else{all.forEach(({s,t,done})=>{const c=sc(s);const safeId=String(t.id).replace(/'/g,"\\'");
+    h+=`<div class="rev-row"><button class="chk${done?' done':''}" onclick="toggleDone(${s.id},'${day}','${safeId}')">${done?'&#x2713;':''}</button><div class="av" style="background:${c.bg};color:${c.c};width:22px;height:22px;font-size:9px">${ini(s.name)}</div><div style="flex:1;min-width:0"><div style="font-size:13px;${done?'text-decoration:line-through;opacity:.5':''};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.label}</div><div style="font-size:11px;color:#888780">${s.name} · ${fmtT(t.sm)}–${fmtT(t.em)}${t.isRec?' · &#x21BA;':''}</div></div><span style="font-size:11px;font-weight:600;color:${done?'#0F6E56':'#888780'};flex-shrink:0;margin-left:8px">${done?'&#x2713; Done':'Pending'}</span></div>`;});}
+  h+=`</div>`;document.getElementById('reviewDiv').innerHTML=h;
 }
 
-// ── STAFF LIST ────────────────────────────────────────────────────────────
-function renderStaffList(){}
+// ── CALENDAR SAVE ──────────────────────────────────────────────────────────
+async function saveTasks(){
+  setSyncStatus('syncing','Saving…');
+  const rows=[];
+  Object.keys(taskStore).forEach(key=>{
+    (taskStore[key]||[]).forEach(t=>{
+      const parts=key.split('|');const sid=parts[0],day=parts[1];
+      const done=compStore[ck(sid,day,t.id)]?'TRUE':'FALSE';
+      rows.push({Id:t.id,StaffId:sid,StaffName:(staff.find(s=>s.id==sid)||{name:''}).name,DayKey:day,TaskLabel:t.label,StartTime:t.sm,EndTime:t.em,IsRecurring:'FALSE',RecurDays:'',IsDone:done});
+    });
+  });
+  recurStore.forEach(r=>{rows.push({Id:r.id,StaffId:r.sid,StaffName:(staff.find(s=>s.id==r.sid)||{name:''}).name,DayKey:'',TaskLabel:r.label,StartTime:r.sm,EndTime:r.em,IsRecurring:'TRUE',RecurDays:r.days,IsDone:'FALSE'});});
+  await postData({rows},'write');
+}
 
-// ── MODAL ─────────────────────────────────────────────────────────────────
+async function saveSamples(){
+  setSyncStatus('syncing','Saving…');
+  const payload={samples:samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId}))};
+  await postData(payload,'writeSamples');
+}
+
+function postData(payload,action){
+  return new Promise((resolve)=>{
+    try{
+      const cb='gsave_'+Date.now();
+      const iframe=document.createElement('iframe');
+      iframe.name=cb;iframe.style.display='none';document.body.appendChild(iframe);
+      const form=document.createElement('form');
+      form.method='POST';form.action=API_URL+'?action='+action+'&callback='+cb;
+      form.target=cb;form.style.display='none';
+      const input=document.createElement('input');
+      input.type='hidden';input.name='data';input.value=JSON.stringify(payload);
+      form.appendChild(input);document.body.appendChild(form);
+      const timer=setTimeout(()=>{try{document.body.removeChild(iframe);document.body.removeChild(form);}catch(e){}setSyncStatus('ok','Saved ✓');resolve();},8000);
+      iframe.onload=function(){clearTimeout(timer);try{document.body.removeChild(iframe);document.body.removeChild(form);}catch(e){}setSyncStatus('ok','Saved ✓ — '+new Date().toLocaleTimeString());resolve();};
+      form.submit();
+    }catch(err){setSyncStatus('err','Save error.');resolve();}
+  });
+}
+
+// ── CALENDAR MODALS ────────────────────────────────────────────────────────
 function openModal(html){document.getElementById('modalBox').innerHTML=html;document.getElementById('modalOverlay').classList.add('open');setTimeout(()=>{const el=document.querySelector('#modalBox input');if(el)el.focus();},80);}
 function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
 document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
 
-function recOpts(){return`<option value="none">One-time only</option><option value="daily">Every day</option><option value="Mon,Tue,Wed,Thu,Fri">Weekdays (Mon–Fri)</option><option value="Mon">Every Monday</option><option value="Tue">Every Tuesday</option><option value="Wed">Every Wednesday</option><option value="Thu">Every Thursday</option><option value="Fri">Every Friday</option><option value="Sat,Sun">Weekends</option>`;}
+function recOpts(){return`<option value="none">One-time only</option><option value="daily">Every day</option><option value="Mon,Tue,Wed,Thu,Fri">Weekdays</option><option value="Mon">Every Monday</option><option value="Tue">Every Tuesday</option><option value="Wed">Every Wednesday</option><option value="Thu">Every Thursday</option><option value="Fri">Every Friday</option><option value="Sat,Sun">Weekends</option>`;}
 
 function openAdd(sid,day,slotIdx){
   const s=staff.find(x=>x.id===sid),c=sc(s);
   const sugSm=slotIdx!=null?SH*60+slotIdx*SLOT:SH*60+60;const sugEm=Math.min(sugSm+60,EH*60);
-  openModal(`<h3><div class="av" style="background:${c.bg};color:${c.c};width:22px;height:22px;font-size:9px">${ini(s.name)}</div>${s.name} &nbsp;&middot;&nbsp; ${day}</h3>
-    <div class="field"><label>Task name</label><input id="m-lbl" placeholder="e.g. DNA extraction"></div>
-    <div class="r2"><div class="field"><label>Start (e.g. 08h30)</label><input id="m-sm" value="${fmtT(sugSm)}"></div><div class="field"><label>End (e.g. 10h00)</label><input id="m-em" value="${fmtT(sugEm)}"></div></div>
-    <div class="field"><label>Recurring</label><select id="m-rec">${recOpts()}</select></div>
+  openModal(`<h3><div class="av" style="background:${c.bg};color:${c.c};width:22px;height:22px;font-size:9px">${ini(s.name)}</div>${s.name} · ${day}</h3>
+    <div class="fg"><div class="field"><label>Task name</label><input id="m-lbl" placeholder="e.g. DNA extraction"></div><div class="field"><label>Recurring</label><select id="m-rec">${recOpts()}</select></div></div>
+    <div class="fg"><div class="field"><label>Start (e.g. 08h30)</label><input id="m-sm" value="${fmtT(sugSm)}"></div><div class="field"><label>End (e.g. 10h00)</label><input id="m-em" value="${fmtT(sugEm)}"></div></div>
     <div class="ma"><button class="bc" onclick="closeModal()">Cancel</button><button class="bp" onclick="doAdd(${sid},'${day}')">Add task</button></div>`);
 }
 
@@ -413,11 +447,11 @@ function doAdd(sid,day){
   const lbl=document.getElementById('m-lbl').value.trim();
   const sm=parseT(document.getElementById('m-sm').value);const em=parseT(document.getElementById('m-em').value);
   const rec=document.getElementById('m-rec').value;
-  if(!lbl){alert('Please enter a task name.');return;}
-  if(sm===null||em===null||em<=sm){alert('Please enter valid start and end times.');return;}
+  if(!lbl){alert('Enter a task name.');return;}
+  if(sm===null||em===null||em<=sm){alert('Enter valid start and end times.');return;}
   if(rec==='none'){setT(sid,day,[...getT(sid,day),{id:'t'+nextTid++,label:lbl,sm,em}]);}
   else{recurStore.push({id:'r'+nextRid++,sid,label:lbl,sm,em,days:rec});}
-  saveToSheet();closeModal();render();
+  saveTasks();closeModal();renderCal();
 }
 
 function openEdit(sid,day,tid){
@@ -426,63 +460,200 @@ function openEdit(sid,day,tid){
   if(isRec){ro=recurStore.find(r=>'R'+r.id===tid);if(!ro)return;t={label:ro.label,sm:ro.sm,em:ro.em};}
   else{t=getT(sid,day).find(x=>x.id===tid);if(!t)return;}
   const done=isDone(sid,day,tid);const safeId=String(tid).replace(/'/g,"\\'");
-  openModal(`<h3><div class="av" style="background:${c.bg};color:${c.c};width:22px;height:22px;font-size:9px">${ini(s.name)}</div>${s.name}${isRec?' &nbsp;&#x21BA; Recurring':''}</h3>
-    <div class="field"><label>Task name</label><input id="m-lbl" value="${t.label}"></div>
-    <div class="r2"><div class="field"><label>Start</label><input id="m-sm" value="${fmtT(t.sm)}"></div><div class="field"><label>End</label><input id="m-em" value="${fmtT(t.em)}"></div></div>
-    <div class="field"><label>Status</label><select id="m-status"><option value="pending"${!done?' selected':''}>Pending</option><option value="done"${done?' selected':''}>Completed &#x2713;</option></select></div>
-    <div class="ma">
-      <button class="bd" onclick="${isRec?`delRec('${ro.id}')`:`delTask(${sid},'${day}','${safeId}')`}">Delete</button>
-      <button class="bc" onclick="closeModal()">Cancel</button>
-      <button class="bp" onclick="${isRec?`saveRec('${ro.id}','${sid}','${day}','${safeId}')`:`saveTask(${sid},'${day}','${safeId}')`}">Save</button>
-    </div>`);
+  openModal(`<h3><div class="av" style="background:${c.bg};color:${c.c};width:22px;height:22px;font-size:9px">${ini(s.name)}</div>${s.name}${isRec?' · ↺ Recurring':''}</h3>
+    <div class="fg"><div class="field"><label>Task name</label><input id="m-lbl" value="${t.label}"></div><div class="field"><label>Status</label><select id="m-status"><option value="pending"${!done?' selected':''}>Pending</option><option value="done"${done?' selected':''}>Completed ✓</option></select></div></div>
+    <div class="fg"><div class="field"><label>Start</label><input id="m-sm" value="${fmtT(t.sm)}"></div><div class="field"><label>End</label><input id="m-em" value="${fmtT(t.em)}"></div></div>
+    <div class="ma"><button class="bd" onclick="${isRec?`delRec('${ro.id}')`:`delTask(${sid},'${day}','${safeId}')`}">Delete</button><button class="bc" onclick="closeModal()">Cancel</button><button class="bp" onclick="${isRec?`saveRec('${ro.id}','${sid}','${day}','${safeId}')`:`saveTask(${sid},'${day}','${safeId}')`}">Save</button></div>`);
 }
 
 function saveTask(sid,day,tid){
   const arr=getT(sid,day),t=arr.find(x=>x.id===tid);
   if(t){const lbl=document.getElementById('m-lbl').value.trim();const sm=parseT(document.getElementById('m-sm').value);const em=parseT(document.getElementById('m-em').value);if(lbl)t.label=lbl;if(sm!==null)t.sm=sm;if(em!==null&&em>t.sm)t.em=em;}
   compStore[ck(sid,day,tid)]=(document.getElementById('m-status').value==='done');
-  setT(sid,day,arr);saveToSheet();closeModal();render();
+  setT(sid,day,arr);saveTasks();closeModal();renderCal();
 }
 function saveRec(rid,sid,day,tid){
   const r=recurStore.find(x=>x.id===rid);
   if(r){const lbl=document.getElementById('m-lbl').value.trim();const sm=parseT(document.getElementById('m-sm').value);const em=parseT(document.getElementById('m-em').value);if(lbl)r.label=lbl;if(sm!==null)r.sm=sm;if(em!==null&&em>r.sm)r.em=em;}
   compStore[ck(sid,day,tid)]=(document.getElementById('m-status').value==='done');
-  saveToSheet();closeModal();render();
+  saveTasks();closeModal();renderCal();
 }
-function delTask(sid,day,tid){if(!confirm('Delete this task?'))return;setT(sid,day,getT(sid,day).filter(x=>x.id!==tid));saveToSheet();closeModal();render();}
-function delRec(rid){if(!confirm('Delete recurring task from all days?'))return;recurStore=recurStore.filter(r=>r.id!==rid);saveToSheet();closeModal();render();}
+function delTask(sid,day,tid){if(!confirm('Delete this task?'))return;setT(sid,day,getT(sid,day).filter(x=>x.id!==tid));saveTasks();closeModal();renderCal();}
+function delRec(rid){if(!confirm('Delete recurring task from all days?'))return;recurStore=recurStore.filter(r=>r.id!==rid);saveTasks();closeModal();renderCal();}
 
-
-function doAddStaff(){
-  const name=document.getElementById('m-name').value.trim();if(!name){alert('Enter a name.');return;}
-  staff.push({id:nextSid++,name,role:document.getElementById('m-role').value.trim()||'Staff',ci:parseInt(document.getElementById('m-ci').value)});
-  closeModal();render();
+// ── REGISTRY RENDER ────────────────────────────────────────────────────────
+function renderRegStats(){
+  const total=samples.length;
+  const pending=samples.filter(s=>s.status==='Pending reception').length;
+  const received=samples.filter(s=>s.status==='Sample received').length;
+  const testing=samples.filter(s=>s.status==='Testing in progress').length;
+  const report=samples.filter(s=>s.status==='Report sent').length;
+  const done=samples.filter(s=>s.status==='Completed / Archived').length;
+  document.getElementById('regStats').innerHTML=`
+    <div class="sc"><div class="sl">Total</div><div class="sv">${total}</div></div>
+    <div class="sc"><div class="sl">Pending</div><div class="sv amber">${pending}</div></div>
+    <div class="sc"><div class="sl">Received</div><div class="sv blue">${received}</div></div>
+    <div class="sc"><div class="sl">Testing</div><div class="sv blue">${testing}</div></div>
+    <div class="sc"><div class="sl">Report sent</div><div class="sv green">${report}</div></div>
+    <div class="sc"><div class="sl">Completed</div><div class="sv green">${done}</div></div>`;
 }
 
-function doSaveStaff(id){
-  const s=staff.find(x=>x.id===id);s.name=document.getElementById('m-name').value.trim()||s.name;s.role=document.getElementById('m-role').value.trim()||s.role;s.ci=parseInt(document.getElementById('m-ci').value);
-  closeModal();render();
+function renderReg(){
+  renderRegStats();
+  const search=document.getElementById('regSearch').value.toLowerCase();
+  const fStatus=document.getElementById('regStatus').value;
+  const fTest=document.getElementById('regTest').value;
+  const filtered=samples.filter(s=>{
+    const ms=!search||[s.id,s.client,s.testType,s.matrix,s.assignedTo].some(v=>v.toLowerCase().includes(search));
+    const mst=!fStatus||s.status===fStatus;
+    const mt=!fTest||s.testType===fTest;
+    return ms&&mst&&mt;
+  });
+  const tbody=document.getElementById('regBody');
+  if(!filtered.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="12">No samples found. Click "+ New sample" to add one.</td></tr>`;return;}
+  tbody.innerHTML=filtered.map(s=>{
+    const badge=SBADGE[s.status]||'b-pending';
+    const priColor=s.priority==='High'?'color:#993C1D':s.priority==='Medium'?'color:#854F0B':'';
+    return `<tr>
+      <td><strong style="${priColor}">${s.id||'—'}</strong>${s.priority==='High'?' <span title="High priority" style="color:#993C1D">⚠</span>':''}</td>
+      <td>${s.client||'—'}</td><td>${s.testType||'—'}</td><td>${s.matrix||'—'}</td>
+      <td style="text-align:center">${s.quantity||'—'}</td>
+      <td>${fmtDate(s.receptionDate)}</td><td>${fmtDate(s.testStartDate)}</td>
+      <td>${fmtDate(s.testEndDate)}</td><td>${fmtDate(s.reportSentDate)}</td>
+      <td>${s.assignedTo?`<span style="color:#534AB7;font-weight:500">${s.assignedTo}</span>`:'<span style="color:#d3d1c7">Unassigned</span>'}</td>
+      <td><span class="badge ${badge}">${s.status}</span></td>
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="abtn" onclick="openEditSample('${s.rowId}')">&#9998; Edit</button>
+        <button class="abtn assign" onclick="openAssign('${s.rowId}')">&#128197; Assign</button>
+        <button class="abtn" onclick="deleteSample('${s.rowId}')" style="color:#993C1D;border-color:#F0997B">&#x2715;</button>
+      </div></td>
+    </tr>`;
+  }).join('');
 }
 
+// ── REGISTRY MODALS ────────────────────────────────────────────────────────
+function staffOpts(selected=''){
+  return `<option value="">Unassigned</option>`+staff.map(s=>`<option value="${s.name}"${s.name===selected?' selected':''}>${s.name} — ${s.role}</option>`).join('');
+}
 
-// ── RENDER ────────────────────────────────────────────────────────────────
-function render(){
-  updateFilter();const d=getDate(),sl=filteredStaff();renderStats(sl);
-  if(view==='daily'){
-    document.getElementById('periodLabel').innerHTML=fmt(d)+(isToday(d)?' <span style="background:#EEEDFE;color:#534AB7;font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px">Today</span>':'');
-    renderDailyTable(d,sl);renderReview(sl);
+function sampleForm(s={}){
+  return `
+    <div class="shd2">Sample information</div>
+    <div class="fg">
+      <div class="field"><label>Sample ID *</label><input id="f-id" value="${s.id||''}" placeholder="e.g. ABL-2026-001"></div>
+      <div class="field"><label>Priority</label><select id="f-priority"><option${(s.priority||'Normal')==='Normal'?' selected':''}>Normal</option><option${s.priority==='Medium'?' selected':''}>Medium</option><option${s.priority==='High'?' selected':''}>High</option></select></div>
+      <div class="field"><label>Client *</label><input id="f-client" value="${s.client||''}" placeholder="Client name"></div>
+      <div class="field"><label>Test type *</label><select id="f-test">${TEST_TYPES.map(t=>`<option${s.testType===t?' selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="field"><label>Matrix</label><input id="f-matrix" value="${s.matrix||''}" placeholder="e.g. Water, Soil, Food"></div>
+      <div class="field"><label>Quantity</label><input id="f-qty" value="${s.quantity||''}" placeholder="e.g. 3 bottles"></div>
+    </div>
+    <div class="shd2">Dates</div>
+    <div class="fg">
+      <div class="field"><label>Reception date</label><input type="date" id="f-reception" value="${s.receptionDate||''}"></div>
+      <div class="field"><label>Test start date</label><input type="date" id="f-teststart" value="${s.testStartDate||''}"></div>
+      <div class="field"><label>Test end date</label><input type="date" id="f-testend" value="${s.testEndDate||''}"></div>
+      <div class="field"><label>Report sent date</label><input type="date" id="f-report" value="${s.reportSentDate||''}"></div>
+    </div>
+    <div class="shd2">Assignment & status</div>
+    <div class="fg">
+      <div class="field"><label>Assign to technician</label><select id="f-staff">${staffOpts(s.assignedTo)}</select></div>
+      <div class="field"><label>Status</label><select id="f-status">${STATUSES.map(st=>`<option${s.status===st?' selected':''}>${st}</option>`).join('')}</select></div>
+    </div>
+    <div class="fg full"><div class="field"><label>Notes</label><textarea id="f-notes">${s.notes||''}</textarea></div></div>`;
+}
+
+function getFormData(){
+  return {
+    id:document.getElementById('f-id').value.trim(),
+    client:document.getElementById('f-client').value.trim(),
+    testType:document.getElementById('f-test').value,
+    matrix:document.getElementById('f-matrix').value.trim(),
+    quantity:document.getElementById('f-qty').value.trim(),
+    receptionDate:document.getElementById('f-reception').value,
+    testStartDate:document.getElementById('f-teststart').value,
+    testEndDate:document.getElementById('f-testend').value,
+    reportSentDate:document.getElementById('f-report').value,
+    assignedTo:document.getElementById('f-staff').value,
+    status:document.getElementById('f-status').value,
+    notes:document.getElementById('f-notes').value.trim(),
+    priority:document.getElementById('f-priority').value
+  };
+}
+
+function openAddSample(){
+  openModal(`<h3>&#9635; New sample</h3>${sampleForm()}
+    <div class="ma"><button class="bc" onclick="closeModal()">Cancel</button><button class="bp" onclick="saveSample(null)">Save sample</button></div>`);
+}
+
+function openEditSample(rowId){
+  const s=samples.find(x=>x.rowId===rowId);if(!s)return;
+  openModal(`<h3>&#9998; Edit — ${s.id}</h3>${sampleForm(s)}
+    <div class="ma"><button class="bd" onclick="deleteSample('${rowId}')">Delete</button><button class="bc" onclick="closeModal()">Cancel</button><button class="bp" onclick="saveSample('${rowId}')">Save</button></div>`);
+}
+
+function openAssign(rowId){
+  const s=samples.find(x=>x.rowId===rowId);if(!s)return;
+  openModal(`<h3>&#128197; Assign to calendar — ${s.id}</h3>
+    <div style="background:#f5f4f0;border-radius:8px;padding:10px 12px;margin-bottom:1rem;font-size:13px">
+      <strong>${s.client}</strong> · ${s.testType}${s.matrix?' · '+s.matrix:''}
+    </div>
+    <div class="fg">
+      <div class="field"><label>Technician</label><select id="a-staff">${staffOpts(s.assignedTo)}</select></div>
+      <div class="field"><label>Task label</label><input id="a-label" value="${s.testType} — ${s.client}"></div>
+    </div>
+    <div class="fg">
+      <div class="field"><label>Date</label><input type="date" id="a-date" value="${s.testStartDate||''}"></div>
+      <div class="field"><label>Recurring</label><select id="a-rec"><option value="none">One-time only</option><option value="daily">Every day</option><option value="Mon,Tue,Wed,Thu,Fri">Weekdays</option></select></div>
+    </div>
+    <div class="fg">
+      <div class="field"><label>Start time</label><input id="a-start" value="08h00"></div>
+      <div class="field"><label>End time</label><input id="a-end" value="10h00"></div>
+    </div>
+    <div class="ma"><button class="bc" onclick="closeModal()">Cancel</button><button class="bp" onclick="assignToCalendar('${rowId}')">&#128197; Add to calendar</button></div>`);
+}
+
+function assignToCalendar(rowId){
+  const s=samples.find(x=>x.rowId===rowId);if(!s)return;
+  const staffName=document.getElementById('a-staff').value;
+  const label=document.getElementById('a-label').value.trim();
+  const dateVal=document.getElementById('a-date').value;
+  const rec=document.getElementById('a-rec').value;
+  const sm=parseT(document.getElementById('a-start').value);
+  const em=parseT(document.getElementById('a-end').value);
+  if(!staffName){alert('Please select a technician.');return;}
+  if(!label){alert('Please enter a task label.');return;}
+  if(!dateVal&&rec==='none'){alert('Please select a date.');return;}
+  if(sm===null||em===null||em<=sm){alert('Enter valid start and end times.');return;}
+  const staffMember=staff.find(x=>x.name===staffName);
+  if(!staffMember){alert('Staff member not found.');return;}
+  if(rec==='none'){
+    setT(staffMember.id,dateVal,[...getT(staffMember.id,dateVal),{id:'t'+nextTid++,label,sm,em}]);
   } else {
-    const e=new Date(d);e.setDate(d.getDate()+6);
-    document.getElementById('periodLabel').textContent=fmt(d)+' – '+fmt(e);
-    renderWeekly(d,sl);
-    document.getElementById('reviewDiv').innerHTML=`<div class="rev"><div class="rev-hd"><span>&#x2713;&nbsp; Daily review</span><span style="font-size:12px;font-weight:400;color:#888780">Switch to Daily view to see task completion</span></div></div>`;
+    recurStore.push({id:'r'+nextRid++,sid:staffMember.id,label,sm,em,days:rec});
   }
+  s.assignedTo=staffName;
+  saveTasks();saveSamples();closeModal();renderCal();renderReg();
+  alert(`✅ Task "${label}" added to ${staffName}'s calendar.\n\nSwitch to the Staff Calendar tab to see it.`);
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────────
-render();
-loadFromSheet();
-// Auto-refresh disabled - use Refresh button to sync
+async function saveSample(rowId){
+  const data=getFormData();
+  if(!data.id){alert('Please enter a Sample ID.');return;}
+  if(!data.client){alert('Please enter a client name.');return;}
+  if(rowId){const s=samples.find(x=>x.rowId===rowId);if(s)Object.assign(s,data);}
+  else{samples.push({...data,rowId:'s'+Date.now()});}
+  closeModal();await saveSamples();renderReg();
+}
+
+async function deleteSample(rowId){
+  if(!confirm('Delete this sample?'))return;
+  samples=samples.filter(s=>s.rowId!==rowId);
+  closeModal();await saveSamples();renderReg();
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+renderCal();
+loadAll();
 </script>
 </body>
 </html>
