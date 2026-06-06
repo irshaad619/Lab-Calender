@@ -241,9 +241,8 @@ async function saveToSheet(){
       const timer=setTimeout(()=>{
         try{document.body.removeChild(iframe);document.body.removeChild(form);}catch(e){}
         // Even if timeout, reload to check if it saved
-        setSyncStatus('syncing','Verifying save…');
+        setSyncStatus('ok','Saved — '+new Date().toLocaleTimeString());
         isSaving=false;
-        loadFromSheet();
         resolve();
       },10000);
 
@@ -252,8 +251,7 @@ async function saveToSheet(){
         try{document.body.removeChild(iframe);document.body.removeChild(form);}catch(e){}
         setSyncStatus('ok','Saved — '+new Date().toLocaleTimeString());
         isSaving=false;
-        // Reload to confirm data is in sheet
-        setTimeout(()=>loadFromSheet(),1500);
+        // Don't reload immediately - keep local data, let next auto-refresh sync
         resolve();
       };
 
@@ -492,7 +490,7 @@ function render(){
 // ── INIT ──────────────────────────────────────────────────────────────────
 render();
 loadFromSheet();
-refreshTimer=setInterval(()=>{if(!isSaving)loadFromSheet();},30000);
+refreshTimer=setInterval(()=>{if(!isSaving)loadFromSheet();},60000);
 </script>
 </body>
 </html>
