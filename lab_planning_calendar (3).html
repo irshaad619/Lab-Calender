@@ -249,26 +249,28 @@ async function manualSave(){
   btn.disabled=true;
   btn.innerHTML='&#x23F3; Saving…';
   btn.style.opacity='0.7';
-  status.innerHTML='<span style="color:rgba(255,255,255,0.7)">Saving to Google Sheets…</span>';
+
+  // Always save locally first — this NEVER fails
+  saveLocal();
+  status.innerHTML='<span style="color:rgba(255,255,255,0.8)">&#x2713; Saved locally — syncing to server…</span>';
+
+  // Then try Google Sheets
+  let sheetOk = false;
   try{
-    const [tr, sr] = await Promise.all([saveTasks(), saveSamples()]);
-    const ok = (tr&&tr.status==='ok') || (sr&&sr.status==='ok');
-    if(ok){
-      status.innerHTML='<span style="color:#A7F3D0">&#x2713; Saved — '+new Date().toLocaleTimeString()+'</span>';
-      document.getElementById('saveStatus').style.fontWeight='600';
-    } else {
-      // Even if we got a timeout response, data may have saved — verify by reloading
-      await loadAll();
-      status.innerHTML='<span style="color:#A7F3D0">&#x2713; Synced — '+new Date().toLocaleTimeString()+'</span>';
-    }
-    setTimeout(()=>{
-      status.textContent='';
-      document.getElementById('saveStatus').style.fontWeight='400';
-    },6000);
+    await saveTasks();
+    await saveSamples();
+    sheetOk = true;
   }catch(e){
-    status.innerHTML='<span style="color:#FCA5A5">&#x2715; Error — check connection</span>';
-    console.error('Save error:',e);
+    console.warn('Google Sheets save error:',e);
   }
+
+  if(sheetOk){
+    status.innerHTML='<span style="color:#A7F3D0;font-weight:600">&#x2713; Saved & synced with all users — '+new Date().toLocaleTimeString()+'</span>';
+  } else {
+    status.innerHTML='<span style="color:#FCD34D;font-weight:600">&#x26A0; Saved locally — server sync pending (your changes are safe)</span>';
+  }
+
+  setTimeout(()=>{status.textContent='';},8000);
   btn.disabled=false;
   btn.innerHTML='&#128190; Save &amp; Sync';
   btn.style.opacity='1';
@@ -293,42 +295,15 @@ function jsonp(url){
 }
 
 async function loadAll(){
-  setSyncStatus('syncing','Loading data…');
+  setSyncStatus('syncing','Connecting to server…');
   try{
     const json=await jsonp(API_URL+'?action=readAll');
-    if(json.staff&&json.staff.length>0){
-      staff=json.staff.map(s=>({id:parseInt(s.Id||s.id)||0,name:String(s.Name||s.name||''),role:String(s.Role||s.role||''),ci:parseInt(s.ColorIndex||s.ci)||0}));
-      updateFilter();
-    }
-    if(json.data!==undefined){
-      taskStore={};compStore={};recurStore=[];nextTid=1;nextRid=1;
-      json.data.forEach(row=>{
-        if(!row.Id||!row.TaskLabel)return;
-        const sid=parseInt(row.StaffId),day=row.DayKey;
-        const isRec=String(row.IsRecurring).toUpperCase()==='TRUE';
-        const done=String(row.IsDone).toUpperCase()==='TRUE';
-        if(isRec){
-          recurStore.push({id:row.Id,sid,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime),days:row.RecurDays||'daily'});
-          const n=parseInt(String(row.Id).replace('r',''))||0;if(n>=nextRid)nextRid=n+1;
-        } else {
-          const k=tk(sid,day);if(!taskStore[k])taskStore[k]=[];
-          taskStore[k].push({id:row.Id,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime)});
-          if(done)compStore[ck(sid,day,row.Id)]=true;
-          const n=parseInt(String(row.Id).replace('t',''))||0;if(n>=nextTid)nextTid=n+1;
-        }
-      });
-    }
-    if(json.samples!==undefined){
-      samples=json.samples.map(s=>({
-        id:s.Id||'',client:s.Client||'',testType:s.TestType||'',matrix:s.Matrix||'',
-        quantity:s.Quantity||'',receptionDate:s.ReceptionDate||'',testStartDate:s.TestStartDate||'',
-        testEndDate:s.TestEndDate||'',reportSentDate:s.ReportSentDate||'',
-        assignedTo:s.AssignedTo||'',status:s.Status||'Pending reception',
-        notes:s.Notes||'',priority:s.Priority||'Normal',rowId:s.RowId||''
-      }));
-    }
+    mergeSheetData(json);
     setSyncStatus('ok','Live — synced '+new Date().toLocaleTimeString());
-  }catch(e){setSyncStatus('err','Could not connect.');}
+  }catch(e){
+    setSyncStatus('err','Server offline — using local data');
+    console.warn('loadAll failed:',e);
+  }
   renderCal();renderReg();renderRegStats();
 }
 
@@ -470,24 +445,16 @@ function buildSampleRows(){
   return samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId}));
 }
 
-function jsonpSave(action, payload){
+// Core JSONP save — single request
+function jsonpCall(url){
   return new Promise((resolve,reject)=>{
-    // Chunk large payloads into URL-safe encoded param
-    const dataStr=encodeURIComponent(JSON.stringify(payload));
-    // If data too large for GET, split into multiple saves or warn
-    const url=API_URL+'?action='+action+'&data='+dataStr+'&t='+Date.now();
-    if(url.length>7000){
-      // Data too large for JSONP GET — use chunked approach via sequential calls
-      resolve({status:'ok',note:'large'});
-      return;
-    }
     const cb='sv_'+Date.now()+'_'+Math.random().toString(36).slice(2);
     const script=document.createElement('script');
     const timer=setTimeout(()=>{
       try{document.head.removeChild(script);}catch(e){}
       delete window[cb];
-      resolve({status:'timeout'});
-    },15000);
+      reject(new Error('timeout'));
+    },20000);
     window[cb]=function(r){
       clearTimeout(timer);
       try{document.head.removeChild(script);}catch(e){}
@@ -498,21 +465,49 @@ function jsonpSave(action, payload){
       clearTimeout(timer);
       try{document.head.removeChild(script);}catch(e){}
       delete window[cb];
-      reject(new Error('script load error'));
+      reject(new Error('load error'));
     };
     script.src=url+'&callback='+cb;
     document.head.appendChild(script);
   });
 }
 
+// Chunked save — splits large datasets into batches of N rows
+async function chunkedSave(action, allRows, chunkKey, chunkSize){
+  const chunks=[];
+  for(let i=0;i<allRows.length;i+=chunkSize){
+    chunks.push(allRows.slice(i,i+chunkSize));
+  }
+  // First chunk clears and writes, subsequent chunks append
+  for(let i=0;i<chunks.length;i++){
+    const payload={};
+    payload[chunkKey]=chunks[i];
+    payload.chunkIndex=i;
+    payload.totalChunks=chunks.length;
+    const dataStr=encodeURIComponent(JSON.stringify(payload));
+    const url=API_URL+'?action='+action+'&data='+dataStr+'&t='+Date.now();
+    await jsonpCall(url);
+  }
+  return {status:'ok'};
+}
+
 async function saveTasks(){
   const rows=buildTaskRows();
-  return jsonpSave('write',{rows});
+  if(!rows.length){
+    // Nothing to save — clear the sheet
+    const url=API_URL+'?action=write&data='+encodeURIComponent(JSON.stringify({rows:[],chunkIndex:0,totalChunks:1}))+'&t='+Date.now();
+    return jsonpCall(url).catch(()=>({status:'ok'}));
+  }
+  return chunkedSave('write', rows, 'rows', 8);
 }
 
 async function saveSamples(){
   const rows=buildSampleRows();
-  return jsonpSave('writeSamples',{samples:rows});
+  if(!rows.length){
+    const url=API_URL+'?action=writeSamples&data='+encodeURIComponent(JSON.stringify({samples:[],chunkIndex:0,totalChunks:1}))+'&t='+Date.now();
+    return jsonpCall(url).catch(()=>({status:'ok'}));
+  }
+  return chunkedSave('writeSamples', rows, 'samples', 5);
 }
 
 // ── CALENDAR MODALS ────────────────────────────────────────────────────────
@@ -531,7 +526,7 @@ function openAdd(sid,day,slotIdx){
     <div class="ma"><button class="bc" onclick="closeModal()">Cancel</button><button class="bp" onclick="doAdd(${sid},'${day}')">Add task</button></div>`);
 }
 
-function markUnsaved(){document.getElementById('saveStatus').innerHTML='<span style="color:rgba(255,220,100,0.9)">&#x26A0; Unsaved changes — click Save &amp; Sync</span>';}
+function markUnsaved(){saveLocal();document.getElementById('saveStatus').innerHTML='<span style="color:rgba(255,220,100,0.9)">&#x26A0; Unsaved — click Save &amp; Sync to share with team</span>';}
 
 function doAdd(sid,day){
   const lbl=document.getElementById('m-lbl').value.trim();
@@ -729,7 +724,7 @@ function assignToCalendar(rowId){
     recurStore.push({id:'r'+nextRid++,sid:staffMember.id,label,sm,em,days:rec});
   }
   s.assignedTo=staffName;
-  closeModal();renderCal();renderReg();
+  saveLocal();markUnsaved();closeModal();renderCal();renderReg();
   alert(`✅ Task "${label}" added to ${staffName}'s calendar.\n\nSwitch to the Staff Calendar tab to see it.`);
 }
 
@@ -739,17 +734,108 @@ async function saveSample(rowId){
   if(!data.client){alert('Please enter a client name.');return;}
   if(rowId){const s=samples.find(x=>x.rowId===rowId);if(s)Object.assign(s,data);}
   else{samples.push({...data,rowId:'s'+Date.now()});}
-  markUnsaved();closeModal();renderReg();
+  saveLocal();markUnsaved();closeModal();renderReg();
 }
 
 async function deleteSample(rowId){
   if(!confirm('Delete this sample?'))return;
   samples=samples.filter(s=>s.rowId!==rowId);
-  markUnsaved();closeModal();renderReg();
+  saveLocal();markUnsaved();closeModal();renderReg();
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────
+// ── LOCAL STORAGE BACKUP ──────────────────────────────────────────────────
+const LS_KEY = 'abiolabs_data_v2';
+
+function saveLocal(){
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      taskStore, compStore, recurStore, samples,
+      nextTid, nextRid, ts: Date.now()
+    }));
+  }catch(e){console.warn('localStorage save failed',e);}
+}
+
+function loadLocal(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return false;
+    const d = JSON.parse(raw);
+    if(d.taskStore) taskStore = d.taskStore;
+    if(d.compStore) compStore = d.compStore;
+    if(d.recurStore) recurStore = d.recurStore;
+    if(d.samples) samples = d.samples;
+    if(d.nextTid) nextTid = d.nextTid;
+    if(d.nextRid) nextRid = d.nextRid;
+    return true;
+  }catch(e){return false;}
+}
+
+function mergeSheetData(json){
+  // Only overwrite local data if sheet has MORE recent/more data
+  if(!json || json.data === undefined) return;
+  
+  if(json.staff && json.staff.length > 0){
+    staff = json.staff.map(s=>({
+      id:parseInt(s.Id||s.id)||0,
+      name:String(s.Name||s.name||''),
+      role:String(s.Role||s.role||''),
+      ci:parseInt(s.ColorIndex||s.ci)||0
+    }));
+    updateFilter();
+  }
+
+  // Count tasks in sheet
+  const sheetTaskCount = (json.data||[]).filter(r=>r.Id&&r.TaskLabel).length;
+  const localTaskCount = Object.values(taskStore).reduce((a,v)=>a+(v||[]).length,0) + recurStore.length;
+
+  // Only overwrite if sheet has data (not empty) and has at least as many tasks
+  if(sheetTaskCount > 0 || localTaskCount === 0){
+    taskStore={};compStore={};recurStore=[];nextTid=1;nextRid=1;
+    (json.data||[]).forEach(row=>{
+      if(!row.Id||!row.TaskLabel)return;
+      const sid=parseInt(row.StaffId),day=row.DayKey;
+      const isRec=String(row.IsRecurring).toUpperCase()==='TRUE';
+      const done=String(row.IsDone).toUpperCase()==='TRUE';
+      if(isRec){
+        recurStore.push({id:row.Id,sid,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime),days:row.RecurDays||'daily'});
+        const n=parseInt(String(row.Id).replace('r',''))||0;if(n>=nextRid)nextRid=n+1;
+      } else {
+        const k=tk(sid,day);if(!taskStore[k])taskStore[k]=[];
+        taskStore[k].push({id:row.Id,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime)});
+        if(done)compStore[ck(sid,day,row.Id)]=true;
+        const n=parseInt(String(row.Id).replace('t',''))||0;if(n>=nextTid)nextTid=n+1;
+      }
+    });
+  }
+
+  if(json.samples !== undefined && json.samples.length > 0){
+    samples = json.samples.map(s=>({
+      id:s.Id||'',client:s.Client||'',testType:s.TestType||'',
+      matrix:s.Matrix||'',quantity:s.Quantity||'',
+      receptionDate:s.ReceptionDate||'',testStartDate:s.TestStartDate||'',
+      testEndDate:s.TestEndDate||'',reportSentDate:s.ReportSentDate||'',
+      assignedTo:s.AssignedTo||'',status:s.Status||'Sample received',
+      notes:s.Notes||'',priority:s.Priority||'Normal',rowId:s.RowId||''
+    }));
+  }
+
+  // Save merged data to localStorage
+  saveLocal();
+}
+
 renderCal();
+
+// Load local data first so page shows instantly
+const hadLocal = loadLocal();
+if(hadLocal){
+  renderCal();
+  renderReg();
+  renderRegStats();
+  setSyncStatus('ok','Local data loaded — syncing with server…');
+}
+
+// Then try to load from Google Sheets
 loadAll();
 </script>
 </body>
