@@ -21,8 +21,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tab-btn:hover{background:rgba(255,255,255,0.2);color:#fff}
 .tab-btn.active{background:rgba(255,255,255,0.2);color:#fff;border-bottom:3px solid #fff}
 .save-area{display:flex;align-items:center;gap:10px}
-#saveBtn{background:linear-gradient(135deg,#27AE60,#2ECC71);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;box-shadow:0 3px 10px rgba(0,0,0,0.2);transition:all .2s;letter-spacing:0.3px}
-#saveBtn:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,0.3);background:linear-gradient(135deg,#219a52,#27AE60)}
+#saveBtn{background:linear-gradient(135deg,#1D4ED8,#3B82F6);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;box-shadow:0 3px 10px rgba(29,78,216,0.35);transition:all .2s;letter-spacing:0.3px}
+#saveBtn:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(29,78,216,0.45);background:linear-gradient(135deg,#1e40af,#1D4ED8)}
 #saveBtn:disabled{opacity:0.6;transform:none}
 .page{display:none;padding:1.5rem}
 .page.active{display:block}
@@ -87,11 +87,11 @@ table.reg tbody tr:last-child{border-bottom:none}
 table.reg tbody tr:hover{background:#fafaf8}
 table.reg tbody td{padding:10px 12px;font-size:13px;color:#2c2c2a;vertical-align:middle}
 .badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
-.b-pending{background:#FEF3C7;color:#92400E}
-.b-received{background:#DBEAFE;color:#1E40AF}
-.b-testing{background:#EDE9FE;color:#5B21B6}
-.b-report{background:#D1FAE5;color:#065F46}
-.b-completed{background:#F3F4F6;color:#374151}
+.b-received{background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD}
+.b-testing{background:#FEF3C7;color:#B45309;border:1px solid #FCD34D}
+.b-completed{background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7}
+.b-report{background:#EDE9FE;color:#5B21B6;border:1px solid #C4B5FD}
+.b-invoice{background:#FCE7F3;color:#9D174D;border:1px solid #F9A8D4}
 .abtn{background:none;border:1px solid #d3d1c7;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#5f5e5a;white-space:nowrap}
 .abtn:hover{background:#f1efe8}
 .abtn.assign{background:#EEEDFE;border-color:#AFA9EC;color:#534AB7}
@@ -185,15 +185,18 @@ table.reg tbody td{padding:10px 12px;font-size:13px;color:#2c2c2a;vertical-align
     <input class="search-box" id="regSearch" placeholder="Search sample ID, client, test…" oninput="renderReg()">
     <select class="fsel" id="regStatus" onchange="renderReg()">
       <option value="">All statuses</option>
-      <option>Pending reception</option><option>Sample received</option>
-      <option>Testing in progress</option><option>Report sent</option>
-      <option>Completed / Archived</option>
+      <option>Sample received</option>
+      <option>Test in progress</option>
+      <option>Test completed</option>
+      <option>Report sent</option>
+      <option>Invoice done &amp; forwarded</option>
     </select>
     <select class="fsel" id="regTest" onchange="renderReg()">
-      <option value="">All test types</option>
+      <option value="">All matrix types</option>
       <option>Microbiology</option><option>DNA / PCR</option><option>Water testing</option>
-      <option>Food testing</option><option>Environmental</option>
-      <option>Medical Device</option><option>VET</option><option>Other</option>
+      <option>Food testing</option><option>Environmental</option><option>Medical Device</option>
+      <option>VET</option><option>Blood</option><option>Urine</option>
+      <option>Soil</option><option>Air</option><option>Other</option>
     </select>
     <button class="btn btn-primary" onclick="openAddSample()">+ New sample</button>
   </div>
@@ -219,9 +222,9 @@ const API_URL='https://script.google.com/macros/s/AKfycbyTt6baEnyGlJf0XMzXGuaBJR
 const SC=[{c:'#534AB7',bg:'#EEEDFE',bd:'#AFA9EC'},{c:'#185FA5',bg:'#E6F1FB',bd:'#85B7EB'},{c:'#0F6E56',bg:'#E1F5EE',bd:'#5DCAA5'},{c:'#993C1D',bg:'#FAECE7',bd:'#F0997B'},{c:'#854F0B',bg:'#FAEEDA',bd:'#EF9F27'},{c:'#72243E',bg:'#FBEAF0',bd:'#ED93B1'},{c:'#3B6D11',bg:'#EAF3DE',bd:'#97C459'},{c:'#5F5E5A',bg:'#F1EFE8',bd:'#B4B2A9'}];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SH=7,EH=18,DMINS=(EH-SH)*60,SLOT=30,SCOLS=DMINS/SLOT,SW=36,NW=114;
-const TEST_TYPES=['Microbiology','DNA / PCR','Water testing','Food testing','Environmental','Medical Device','VET','Other'];
-const STATUSES=['Pending reception','Sample received','Testing in progress','Report sent','Completed / Archived'];
-const SBADGE={'Pending reception':'b-pending','Sample received':'b-received','Testing in progress':'b-testing','Report sent':'b-report','Completed / Archived':'b-completed'};
+const TEST_TYPES=[];
+const STATUSES=['Sample received','Test in progress','Test completed','Report sent','Invoice done & forwarded'];
+const SBADGE={'Sample received':'b-received','Test in progress':'b-testing','Test completed':'b-completed','Report sent':'b-report','Invoice done & forwarded':'b-invoice'};
 
 // ── STATE ─────────────────────────────────────────────────────────────────
 let staff=[],taskStore={},compStore={},recurStore=[],samples=[];
@@ -537,18 +540,18 @@ function delRec(rid){if(!confirm('Delete recurring task from all days?'))return;
 // ── REGISTRY RENDER ────────────────────────────────────────────────────────
 function renderRegStats(){
   const total=samples.length;
-  const pending=samples.filter(s=>s.status==='Pending reception').length;
   const received=samples.filter(s=>s.status==='Sample received').length;
-  const testing=samples.filter(s=>s.status==='Testing in progress').length;
+  const testing=samples.filter(s=>s.status==='Test in progress').length;
+  const completed=samples.filter(s=>s.status==='Test completed').length;
   const report=samples.filter(s=>s.status==='Report sent').length;
-  const done=samples.filter(s=>s.status==='Completed / Archived').length;
+  const invoice=samples.filter(s=>s.status==='Invoice done & forwarded').length;
   document.getElementById('regStats').innerHTML=`
-    <div class="sc"><div class="sl">Total</div><div class="sv">${total}</div></div>
-    <div class="sc"><div class="sl">Pending</div><div class="sv amber">${pending}</div></div>
-    <div class="sc"><div class="sl">Received</div><div class="sv blue">${received}</div></div>
-    <div class="sc"><div class="sl">Testing</div><div class="sv blue">${testing}</div></div>
-    <div class="sc"><div class="sl">Report sent</div><div class="sv green">${report}</div></div>
-    <div class="sc"><div class="sl">Completed</div><div class="sv green">${done}</div></div>`;
+    <div class="sc" style="border-left:4px solid #3B82F6"><div class="sl">Total samples</div><div class="sv">${total}</div></div>
+    <div class="sc" style="border-left:4px solid #1D4ED8"><div class="sl">Sample received</div><div class="sv blue">${received}</div></div>
+    <div class="sc" style="border-left:4px solid #B45309"><div class="sl">Test in progress</div><div class="sv amber">${testing}</div></div>
+    <div class="sc" style="border-left:4px solid #065F46"><div class="sl">Test completed</div><div class="sv green">${completed}</div></div>
+    <div class="sc" style="border-left:4px solid #5B21B6"><div class="sl">Report sent</div><div class="sv" style="color:#5B21B6">${report}</div></div>
+    <div class="sc" style="border-left:4px solid #9D174D"><div class="sl">Invoice forwarded</div><div class="sv" style="color:#9D174D">${invoice}</div></div>`;
 }
 
 function renderReg(){
@@ -595,9 +598,16 @@ function sampleForm(s={}){
     <div class="fg">
       <div class="field"><label>Sample ID *</label><input id="f-id" value="${s.id||''}" placeholder="e.g. ABL-2026-001"></div>
       <div class="field"><label>Priority</label><select id="f-priority"><option${(s.priority||'Normal')==='Normal'?' selected':''}>Normal</option><option${s.priority==='Medium'?' selected':''}>Medium</option><option${s.priority==='High'?' selected':''}>High</option></select></div>
-      <div class="field"><label>Client *</label><input id="f-client" value="${s.client||''}" placeholder="Client name"></div>
-      <div class="field"><label>Test type *</label><select id="f-test">${TEST_TYPES.map(t=>`<option${s.testType===t?' selected':''}>${t}</option>`).join('')}</select></div>
-      <div class="field"><label>Matrix</label><input id="f-matrix" value="${s.matrix||''}" placeholder="e.g. Water, Soil, Food"></div>
+      <div class="field"><label>Client *</label>
+        <input id="f-client" value="${s.client||''}" placeholder="Type or select client" list="client-list">
+        <datalist id="client-list">${[...new Set(samples.filter(x=>x.client).map(x=>x.client))].map(c=>`<option value="${c}">`).join('')}</datalist>
+      </div>
+      <div class="field"><label>Test type</label><input id="f-test" value="${s.testType||''}" placeholder="e.g. PCR, Microbiology, Water test…"></div>
+      <div class="field"><label>Matrix / Sample type</label>
+        <select id="f-matrix">
+          ${['','Microbiology','DNA / PCR','Water testing','Food testing','Environmental','Medical Device','VET','Blood','Urine','Soil','Air','Other'].map(m=>`<option value="${m}"${(s.matrix||'')=== m?' selected':''}>${m||'— Select matrix —'}</option>`).join('')}
+        </select>
+      </div>
       <div class="field"><label>Quantity</label><input id="f-qty" value="${s.quantity||''}" placeholder="e.g. 3 bottles"></div>
     </div>
     <div class="shd2">Dates</div>
@@ -619,8 +629,8 @@ function getFormData(){
   return {
     id:document.getElementById('f-id').value.trim(),
     client:document.getElementById('f-client').value.trim(),
-    testType:document.getElementById('f-test').value,
-    matrix:document.getElementById('f-matrix').value.trim(),
+    testType:(document.getElementById('f-test').value||'').trim(),
+    matrix:document.getElementById('f-matrix').value,
     quantity:document.getElementById('f-qty').value.trim(),
     receptionDate:document.getElementById('f-reception').value,
     testStartDate:document.getElementById('f-teststart').value,
