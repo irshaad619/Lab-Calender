@@ -211,41 +211,58 @@ async function saveToSheet(){
   recurStore.forEach(r=>{
     rows.push({Id:r.id,StaffId:r.sid,StaffName:(staff.find(s=>s.id==r.sid)||{name:''}).name,DayKey:'',TaskLabel:r.label,StartTime:r.sm,EndTime:r.em,IsRecurring:'TRUE',RecurDays:r.days,IsDone:'FALSE'});
   });
+
+  // Use hidden iframe + form POST to avoid URL length limits
   return new Promise((resolve)=>{
-    const cb='gsave_'+Date.now();
-    const script=document.createElement('script');
-    const timer=setTimeout(()=>{
-      try{document.head.removeChild(script);}catch(e){}
-      delete window[cb];
-      setSyncStatus('err','Save timed out.');
-      isSaving=false;
-      resolve();
-    },12000);
-    window[cb]=function(json){
-      clearTimeout(timer);
-      try{document.head.removeChild(script);}catch(e){}
-      delete window[cb];
-      if(json&&json.status==='ok'){
-        setSyncStatus('ok','Saved — '+new Date().toLocaleTimeString());
+    try{
+      const cb='gsave_'+Date.now();
+      const payload=JSON.stringify({rows});
+
+      // Create hidden iframe to receive response
+      const iframe=document.createElement('iframe');
+      iframe.name=cb;
+      iframe.style.display='none';
+      document.body.appendChild(iframe);
+
+      // Create form to POST data
+      const form=document.createElement('form');
+      form.method='POST';
+      form.action=API_URL+'?callback='+cb+'&action=write';
+      form.target=cb;
+      form.style.display='none';
+
+      const input=document.createElement('input');
+      input.type='hidden';
+      input.name='data';
+      input.value=payload;
+      form.appendChild(input);
+      document.body.appendChild(form);
+
+      const timer=setTimeout(()=>{
+        try{document.body.removeChild(iframe);document.body.removeChild(form);}catch(e){}
+        // Even if timeout, reload to check if it saved
+        setSyncStatus('syncing','Verifying save…');
         isSaving=false;
         loadFromSheet();
-      } else {
-        setSyncStatus('err','Save failed.');
+        resolve();
+      },10000);
+
+      iframe.onload=function(){
+        clearTimeout(timer);
+        try{document.body.removeChild(iframe);document.body.removeChild(form);}catch(e){}
+        setSyncStatus('ok','Saved — '+new Date().toLocaleTimeString());
         isSaving=false;
-      }
-      resolve();
-    };
-    script.onerror=function(){
-      clearTimeout(timer);
-      try{document.head.removeChild(script);}catch(e){}
-      delete window[cb];
-      setSyncStatus('err','Save failed. Check connection.');
+        // Reload to confirm data is in sheet
+        setTimeout(()=>loadFromSheet(),1500);
+        resolve();
+      };
+
+      form.submit();
+    }catch(err){
+      setSyncStatus('err','Save error: '+err.message);
       isSaving=false;
       resolve();
-    };
-    const data=encodeURIComponent(JSON.stringify({rows}));
-    script.src=API_URL+'?action=write&data='+data+'&callback='+cb+'&t='+Date.now();
-    document.head.appendChild(script);
+    }
   });
 }
 
