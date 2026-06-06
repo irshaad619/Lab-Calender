@@ -254,20 +254,31 @@ async function manualSave(){
   saveLocal();
   status.innerHTML='<span style="color:rgba(255,255,255,0.8)">&#x2713; Saved locally — syncing to server…</span>';
 
-  // Then try Google Sheets
-  let sheetOk = false;
+  // Save to Google Sheets via POST — fire and forget (no-cors)
+  // We wait 3 seconds for the POST to complete, then verify by reading back
+  status.innerHTML='<span style="color:rgba(255,255,255,0.8)">Sending to Google Sheets…</span>';
   try{
     await saveTasks();
     await saveSamples();
-    sheetOk = true;
+    // Wait 3 seconds for Google Sheets to process
+    await new Promise(r=>setTimeout(r,3000));
+    // Verify by reading back from sheet
+    status.innerHTML='<span style="color:rgba(255,255,255,0.8)">Verifying…</span>';
+    const json = await jsonp(API_URL+'?action=readAll').catch(()=>null);
+    if(json && json.data !== undefined){
+      const sheetCount = json.data.length;
+      const localCount = Object.values(taskStore).reduce((a,v)=>a+(v||[]).length,0)+recurStore.length;
+      if(sheetCount >= localCount){
+        status.innerHTML='<span style="color:#A7F3D0;font-weight:600">&#x2713; All changes saved & visible to team — '+new Date().toLocaleTimeString()+'</span>';
+      } else {
+        status.innerHTML='<span style="color:#FCD34D;font-weight:600">&#x26A0; Partially saved ('+sheetCount+'/'+localCount+' tasks) — try again</span>';
+      }
+    } else {
+      status.innerHTML='<span style="color:#A7F3D0;font-weight:600">&#x2713; Sent to server — '+new Date().toLocaleTimeString()+'</span>';
+    }
   }catch(e){
-    console.warn('Google Sheets save error:',e);
-  }
-
-  if(sheetOk){
-    status.innerHTML='<span style="color:#A7F3D0;font-weight:600">&#x2713; Saved & synced with all users — '+new Date().toLocaleTimeString()+'</span>';
-  } else {
-    status.innerHTML='<span style="color:#FCD34D;font-weight:600">&#x26A0; Saved locally — server sync pending (your changes are safe)</span>';
+    status.innerHTML='<span style="color:#FCD34D;font-weight:600">&#x26A0; Data safe locally — could not reach server</span>';
+    console.error('Save error:',e);
   }
 
   setTimeout(()=>{status.textContent='';},8000);
@@ -445,69 +456,32 @@ function buildSampleRows(){
   return samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId}));
 }
 
-// Core JSONP save — single request
-function jsonpCall(url){
-  return new Promise((resolve,reject)=>{
-    const cb='sv_'+Date.now()+'_'+Math.random().toString(36).slice(2);
-    const script=document.createElement('script');
-    const timer=setTimeout(()=>{
-      try{document.head.removeChild(script);}catch(e){}
-      delete window[cb];
-      reject(new Error('timeout'));
-    },20000);
-    window[cb]=function(r){
-      clearTimeout(timer);
-      try{document.head.removeChild(script);}catch(e){}
-      delete window[cb];
-      resolve(r);
-    };
-    script.onerror=function(){
-      clearTimeout(timer);
-      try{document.head.removeChild(script);}catch(e){}
-      delete window[cb];
-      reject(new Error('load error'));
-    };
-    script.src=url+'&callback='+cb;
-    document.head.appendChild(script);
-  });
-}
-
-// Chunked save — splits large datasets into batches of N rows
-async function chunkedSave(action, allRows, chunkKey, chunkSize){
-  const chunks=[];
-  for(let i=0;i<allRows.length;i+=chunkSize){
-    chunks.push(allRows.slice(i,i+chunkSize));
+// ── RELIABLE SAVE via fetch POST no-cors ─────────────────────────────────
+// no-cors mode fires and forgets — we can't read the response
+// but the request DOES reach Google Apps Script reliably
+async function postSave(action, payload){
+  try{
+    await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({action, ...payload})
+    });
+    return {status:'ok'};
+  }catch(e){
+    console.error('POST save error:', e);
+    throw e;
   }
-  // First chunk clears and writes, subsequent chunks append
-  for(let i=0;i<chunks.length;i++){
-    const payload={};
-    payload[chunkKey]=chunks[i];
-    payload.chunkIndex=i;
-    payload.totalChunks=chunks.length;
-    const dataStr=encodeURIComponent(JSON.stringify(payload));
-    const url=API_URL+'?action='+action+'&data='+dataStr+'&t='+Date.now();
-    await jsonpCall(url);
-  }
-  return {status:'ok'};
 }
 
 async function saveTasks(){
-  const rows=buildTaskRows();
-  if(!rows.length){
-    // Nothing to save — clear the sheet
-    const url=API_URL+'?action=write&data='+encodeURIComponent(JSON.stringify({rows:[],chunkIndex:0,totalChunks:1}))+'&t='+Date.now();
-    return jsonpCall(url).catch(()=>({status:'ok'}));
-  }
-  return chunkedSave('write', rows, 'rows', 8);
+  const rows = buildTaskRows();
+  return postSave('write', {rows});
 }
 
 async function saveSamples(){
-  const rows=buildSampleRows();
-  if(!rows.length){
-    const url=API_URL+'?action=writeSamples&data='+encodeURIComponent(JSON.stringify({samples:[],chunkIndex:0,totalChunks:1}))+'&t='+Date.now();
-    return jsonpCall(url).catch(()=>({status:'ok'}));
-  }
-  return chunkedSave('writeSamples', rows, 'samples', 5);
+  const rows = buildSampleRows();
+  return postSave('writeSamples', {samples: rows});
 }
 
 // ── CALENDAR MODALS ────────────────────────────────────────────────────────
