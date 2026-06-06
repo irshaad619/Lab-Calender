@@ -218,7 +218,7 @@ table.reg tbody td{padding:10px 12px;font-size:13px;color:#2c2c2a;vertical-align
 </div>
 
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbx_tYevsJk1OxbG5I5bkUxzVc8IbognhZQQ9XT4qJ8LuQ2hKAm0xlY6pO3gmfQHkp3JLA/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbyKe9ctzfb-DwpbghYIgZpKf-1uz7QNiU7juLnTu4QiL6NDWxEY__LNbOkOB_Q4yl9yaQ/exec';
 const SC=[{c:'#534AB7',bg:'#EEEDFE',bd:'#AFA9EC'},{c:'#185FA5',bg:'#E6F1FB',bd:'#85B7EB'},{c:'#0F6E56',bg:'#E1F5EE',bd:'#5DCAA5'},{c:'#993C1D',bg:'#FAECE7',bd:'#F0997B'},{c:'#854F0B',bg:'#FAEEDA',bd:'#EF9F27'},{c:'#72243E',bg:'#FBEAF0',bd:'#ED93B1'},{c:'#3B6D11',bg:'#EAF3DE',bd:'#97C459'},{c:'#5F5E5A',bg:'#F1EFE8',bd:'#B4B2A9'}];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SH=7,EH=18,DMINS=(EH-SH)*60,SLOT=30,SCOLS=DMINS/SLOT,SW=36,NW=114;
@@ -343,6 +343,40 @@ function ck(sid,d,tid){return `${sid}|${d}|${tid}`;}
 function isDone(sid,d,tid){return !!compStore[ck(sid,d,tid)];}
 function toggleDone(sid,d,tid){compStore[ck(sid,d,tid)]=!compStore[ck(sid,d,tid)];saveTasks();renderCal();}
 function fmtDate(d){if(!d||d==='')return '<span style="color:#d3d1c7">—</span>';try{const dt=new Date(d);if(isNaN(dt.getTime()))return d;return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return d;}}
+function addWorkingDays(dateStr, days){
+  if(!dateStr) return null;
+  const d = new Date(dateStr);
+  if(isNaN(d.getTime())) return null;
+  let count = 0;
+  while(count < days){
+    d.setDate(d.getDate()+1);
+    const dow = d.getDay();
+    if(dow !== 0 && dow !== 6) count++; // skip weekends
+  }
+  return d;
+}
+
+function getReportDueDate(testEndDate){
+  return addWorkingDays(testEndDate, 5);
+}
+
+function getReportFlag(s){
+  // Only flag if test is completed or report not yet sent
+  if(s.status === 'Report sent' || s.status === 'Invoice done & forwarded') return null;
+  if(!s.testEndDate) return null;
+  const due = getReportDueDate(s.testEndDate);
+  if(!due) return null;
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  const dueDay = new Date(due);
+  dueDay.setHours(0,0,0,0);
+  const diffMs = dueDay - now;
+  const diffDays = Math.ceil(diffMs / (1000*60*60*24));
+  if(diffDays < 0) return {type:'overdue', days: Math.abs(diffDays), due};
+  if(diffDays <= 2) return {type:'due-soon', days: diffDays, due};
+  return null;
+}
+
 function fmtDateTime(d,t){
   if(!d||d==='')return '<span style="color:#d3d1c7">—</span>';
   try{
@@ -496,7 +530,7 @@ function buildTaskRows(){
 }
 
 function buildSampleRows(){
-  return samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,ReceptionTime:s.receptionTime||'',TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId}));
+  return samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,ReceptionTime:s.receptionTime||'',TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId,OverdueComment:s.overdueComment||''}));
 }
 
 // ── RELIABLE SAVE via fetch POST no-cors ─────────────────────────────────
@@ -617,6 +651,12 @@ function renderReg(){
     const badge=SBADGE[s.status]||'b-pending';
     const priColor=s.priority==='High'?'color:#993C1D':s.priority==='Medium'?'color:#854F0B':'';
     // Row background colour based on status
+    // Report flag
+    const flag = getReportFlag(s);
+    const flagHtml = flag ? (flag.type==='overdue'
+      ? `<div style="display:inline-flex;align-items:center;gap:4px;background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;margin-top:3px">⚠ OVERDUE ${flag.days}d</div>`
+      : `<div style="display:inline-flex;align-items:center;gap:4px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;margin-top:3px">⏰ Due in ${flag.days}d</div>`)
+      : '';
     const rowBg={
       'Sample received':'#EFF6FF',
       'Test in progress':'#FFFBEB',
@@ -640,7 +680,7 @@ function renderReg(){
       <td>${fmtDate(s.testEndDate)}</td>
       <td>${fmtDate(s.reportSentDate)}</td>
       <td>${s.assignedTo?`<span style="color:#534AB7;font-weight:500">${s.assignedTo}</span>`:'<span style="color:#d3d1c7">Unassigned</span>'}</td>
-      <td><span class="badge ${badge}">${s.status}</span></td>
+      <td><span class="badge ${badge}">${s.status}</span>${flagHtml}${s.overdueComment?`<div style="font-size:10px;color:#991B1B;margin-top:2px;font-style:italic">💬 ${s.overdueComment}</div>`:''}</td>
       <td><div style="display:flex;gap:4px;flex-wrap:wrap">
         <button class="abtn" onclick="openEditSample('${s.rowId}')">&#9998; Edit</button>
         <button class="abtn assign" onclick="openAssign('${s.rowId}')">&#128197; Assign</button>
@@ -659,7 +699,7 @@ function sampleForm(s={}){
   return `
     <div class="shd2">Sample information</div>
     <div class="fg">
-      <div class="field"><label>Sample ID *</label><input id="f-id" value="${s.id||''}" placeholder="e.g. ABL-2026-001"></div>
+      <div class="field"><label>Sample ID <span style="font-weight:400;color:#888">(optional)</span></label><input id="f-id" value="${s.id||''}" placeholder="e.g. ABL-2026-001"></div>
       <div class="field"><label>Priority</label><select id="f-priority"><option${(s.priority||'Normal')==='Normal'?' selected':''}>Normal</option><option${s.priority==='Medium'?' selected':''}>Medium</option><option${s.priority==='High'?' selected':''}>High</option></select></div>
       <div class="field"><label>Client *</label>
         <input id="f-client" value="${s.client||''}" placeholder="Type or select client" list="client-list">
@@ -704,7 +744,8 @@ function getFormData(){
     assignedTo:document.getElementById('f-staff').value,
     status:document.getElementById('f-status').value,
     notes:document.getElementById('f-notes').value.trim(),
-    priority:document.getElementById('f-priority').value
+    priority:document.getElementById('f-priority').value,
+    overdueComment:(document.getElementById('f-overdue-comment')?document.getElementById('f-overdue-comment').value.trim():'')
   };
 }
 
@@ -766,8 +807,8 @@ function assignToCalendar(rowId){
 
 async function saveSample(rowId){
   const data=getFormData();
-  if(!data.id){alert('Please enter a Sample ID.');return;}
-  if(!data.client){alert('Please enter a client name.');return;}
+  // Sample ID is optional - save without if not provided
+  if(!data.client){alert('Please enter a client name to save the sample.');return;}
   if(rowId){const s=samples.find(x=>x.rowId===rowId);if(s)Object.assign(s,data);}
   else{samples.push({...data,rowId:'s'+Date.now()});}
   saveLocal();markUnsaved();closeModal();renderReg();
@@ -861,7 +902,8 @@ function mergeSheetData(json){
       receptionDate:s.ReceptionDate||'',receptionTime:s.ReceptionTime||'',testStartDate:s.TestStartDate||'',
       testEndDate:s.TestEndDate||'',reportSentDate:s.ReportSentDate||'',
       assignedTo:s.AssignedTo||'',status:s.Status||'Sample received',
-      notes:s.Notes||'',priority:s.Priority||'Normal',rowId:s.RowId||''
+      notes:s.Notes||'',priority:s.Priority||'Normal',rowId:s.RowId||'',
+      overdueComment:s.OverdueComment||''
     }));
   }
 
