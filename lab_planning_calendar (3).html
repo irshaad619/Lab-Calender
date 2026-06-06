@@ -218,7 +218,7 @@ table.reg tbody td{padding:10px 12px;font-size:13px;color:#2c2c2a;vertical-align
 </div>
 
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbxnynmExlC1qBGOcWEYZltvbnFogicc4nBX0V3iymK6g5ZMXifKQKzhWRv9rnQjo6Wssw/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbzh0LK8HKgyHaPfVTLGRkqMttLZd1r2EPyIn7QIvsyU8OAr3iU0Wc--jzCwkJRC6AsISw/exec';
 const SC=[{c:'#534AB7',bg:'#EEEDFE',bd:'#AFA9EC'},{c:'#185FA5',bg:'#E6F1FB',bd:'#85B7EB'},{c:'#0F6E56',bg:'#E1F5EE',bd:'#5DCAA5'},{c:'#993C1D',bg:'#FAECE7',bd:'#F0997B'},{c:'#854F0B',bg:'#FAEEDA',bd:'#EF9F27'},{c:'#72243E',bg:'#FBEAF0',bd:'#ED93B1'},{c:'#3B6D11',bg:'#EAF3DE',bd:'#97C459'},{c:'#5F5E5A',bg:'#F1EFE8',bd:'#B4B2A9'}];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SH=7,EH=18,DMINS=(EH-SH)*60,SLOT=30,SCOLS=DMINS/SLOT,SW=36,NW=114;
@@ -443,12 +443,40 @@ function buildTaskRows(){
   const rows=[];
   Object.keys(taskStore).forEach(key=>{
     (taskStore[key]||[]).forEach(t=>{
-      const parts=key.split('|');const sid=parts[0],day=parts[1];
+      const parts=key.split('|');
+      const sid=parseInt(parts[0]);
+      const day=parts[1];
       const done=compStore[ck(sid,day,t.id)]?'TRUE':'FALSE';
-      rows.push({Id:t.id,StaffId:sid,StaffName:(staff.find(s=>s.id==sid)||{name:''}).name,DayKey:day,TaskLabel:t.label,StartTime:t.sm,EndTime:t.em,IsRecurring:'FALSE',RecurDays:'',IsDone:done});
+      const staffMember=staff.find(s=>s.id===sid)||{name:''};
+      rows.push({
+        Id:String(t.id),
+        StaffId:sid,
+        StaffName:staffMember.name,
+        DayKey:day,
+        TaskLabel:t.label,
+        StartTime:t.sm,
+        EndTime:t.em,
+        IsRecurring:'FALSE',
+        RecurDays:'',
+        IsDone:done
+      });
     });
   });
-  recurStore.forEach(r=>{rows.push({Id:r.id,StaffId:r.sid,StaffName:(staff.find(s=>s.id==r.sid)||{name:''}).name,DayKey:'',TaskLabel:r.label,StartTime:r.sm,EndTime:r.em,IsRecurring:'TRUE',RecurDays:r.days,IsDone:'FALSE'});});
+  recurStore.forEach(r=>{
+    const staffMember=staff.find(s=>s.id===r.sid)||{name:''};
+    rows.push({
+      Id:String(r.id),
+      StaffId:r.sid,
+      StaffName:staffMember.name,
+      DayKey:'',
+      TaskLabel:r.label,
+      StartTime:r.sm,
+      EndTime:r.em,
+      IsRecurring:'TRUE',
+      RecurDays:r.days,
+      IsDone:'FALSE'
+    });
+  });
   return rows;
 }
 
@@ -764,13 +792,16 @@ function mergeSheetData(json){
     taskStore={};compStore={};recurStore=[];nextTid=1;nextRid=1;
     (json.data||[]).forEach(row=>{
       if(!row.Id||!row.TaskLabel)return;
-      const sid=parseInt(row.StaffId),day=row.DayKey;
+      const sid=parseInt(String(row.StaffId||'').trim())||0;
+      const day=String(row.DayKey||'').trim();
       const isRec=String(row.IsRecurring).toUpperCase()==='TRUE';
       const done=String(row.IsDone).toUpperCase()==='TRUE';
+      if(!sid)return;
       if(isRec){
         recurStore.push({id:row.Id,sid,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime),days:row.RecurDays||'daily'});
         const n=parseInt(String(row.Id).replace('r',''))||0;if(n>=nextRid)nextRid=n+1;
       } else {
+        if(!day)return;
         const k=tk(sid,day);if(!taskStore[k])taskStore[k]=[];
         taskStore[k].push({id:row.Id,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime)});
         if(done)compStore[ck(sid,day,row.Id)]=true;
