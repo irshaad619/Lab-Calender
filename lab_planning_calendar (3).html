@@ -728,7 +728,7 @@ function renderDailyTable(date,sl){
     allT(s.id,day).forEach(t=>{
       const si=slotOf(t.sm),ei=slotOf(t.em),left=NW+si*SW+1,width=Math.max((ei-si)*SW-2,10);
       const done2=isDone(s.id,day,t.id);const safeId=String(t.id).replace(/'/g,"\'");
-      blks+=`<div class="blk${done2?' done':''}" data-ri="${ri}" style="left:${left}px;width:${width}px;background:${c.bg};color:${c.c};border-color:${c.bd}" onclick="openEdit(${s.id},'${day}','${safeId}')">
+      blks+=`<div class="blk${done2?' done':''}" data-ri="${ri}" data-slot="${si}" data-span="${span}" style="left:${left}px;width:${width}px;background:${c.bg};color:${c.c};border-color:${c.bd}" onclick="openEdit(${s.id},'${day}','${safeId}')">
         ${t.isRec?'↺ ':''}${done2?'✓ ':''}
         <span class="lbl">${t.label}</span><span class="t2">${fmtT(t.sm)}</span></div>`;
     });
