@@ -369,7 +369,7 @@ function setSyncStatus(state,msg){const d=document.getElementById('syncDot'),t=d
 function jsonp(url){return new Promise((resolve,reject)=>{const cb='cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);const script=document.createElement('script');const timer=setTimeout(()=>{try{document.head.removeChild(script);}catch(e){}delete window[cb];reject(new Error('timeout'));},15000);window[cb]=function(data){clearTimeout(timer);try{document.head.removeChild(script);}catch(e){}delete window[cb];resolve(data);};script.onerror=function(){clearTimeout(timer);try{document.head.removeChild(script);}catch(e){}delete window[cb];reject(new Error('error'));};script.src=url+(url.includes('?')?'&':'?')+'callback='+cb+'&t='+Date.now();document.head.appendChild(script);});}
 
 async function loadAll(){
-  setSyncStatus('syncing','Loading data…');
+  setSyncStatus('syncing','Loading…');
   try{
     const json=await jsonp(API_URL+'?action=readAll');
     if(json.staff&&json.staff.length>0){staff=json.staff.map(s=>({id:parseInt(s.Id||s.id)||0,name:String(s.Name||s.name||''),role:String(s.Role||s.role||''),ci:parseInt(s.ColorIndex||s.ci)||0}));updateFilter();}
@@ -391,6 +391,7 @@ async function loadAll(){
     setSyncStatus('ok','Live — '+new Date().toLocaleTimeString());
   }catch(e){setSyncStatus('err','Could not connect.');}
   renderCal();renderReg();renderRegStats();renderHome();updateOverdueBadge();
+  return Promise.resolve();
 }
 
 // ── HELPERS ────────────────────────────────────────────────────────────────
@@ -504,7 +505,7 @@ function renderHome(){
     const done=todayTasks2.filter(x=>x.done).length;
     const pct=Math.round(done/todayTasks2.length*100);
     ts.innerHTML=`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:11px;color:#6B7280;margin-bottom:4px"><span>${done}/${todayTasks2.length} completed</span><span>${pct}%</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${pct===100?'#10B981':'#3B82F6'}"></div></div></div>`
-    +todayTasks2.slice(0,6).map({s,t,done}=>{const c=sc(s);return`<div class="today-task"><div class="today-task-av" style="background:${c.bg};color:${c.c}">${ini(s.name)}</div><div class="today-task-info"><div class="today-task-label" style="${done?'text-decoration:line-through;opacity:.5':''}">${t.label}</div><div class="today-task-time">${s.name} · ${fmtT(t.sm)}–${fmtT(t.em)}</div></div></div>`;}).join('');
+    +todayTasks2.slice(0,6).map(({s,t,done})=>{const c=sc(s);return`<div class="today-task"><div class="today-task-av" style="background:${c.bg};color:${c.c}">${ini(s.name)}</div><div class="today-task-info"><div class="today-task-label" style="${done?'text-decoration:line-through;opacity:.5':''}">${t.label}</div><div class="today-task-time">${s.name} · ${fmtT(t.sm)}–${fmtT(t.em)}</div></div></div>`;}).join('');
   }
 
   // Status breakdown
@@ -861,7 +862,20 @@ async function deleteSample(rowId){
 // Render home immediately with date - data fills in after load
 renderHome();
 renderCal();
-loadAll();
+
+// Show content immediately, then try to connect
+setSyncStatus('syncing','Connecting to Google Sheets…');
+loadAll().catch(()=>{
+  setSyncStatus('err','Could not connect — showing local data');
+});
+
+// If still connecting after 16 seconds, stop spinner
+setTimeout(()=>{
+  const dot = document.getElementById('syncDot');
+  if(dot && dot.classList.contains('syncing')){
+    setSyncStatus('err','Connection timeout — check your internet');
+  }
+}, 16000);
 </script>
 </body>
 </html>
