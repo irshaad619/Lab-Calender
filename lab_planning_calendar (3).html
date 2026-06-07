@@ -440,7 +440,7 @@ table.cal th.shd:last-child,table.cal td.sc2:last-child{width:auto !important}
 </div>
 
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbw3lGxOCxJRjVeapXoRl-_u-KStSYuUYF5i0bdNoF5PMblhMBoqdKpsi3IJEMEqP2eu7g/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbz-ar8W40ejKK1RwkGEW3GphKXxGxwiw-uLO_SDrV__6wbIw5D5RuT_lB0dgYqrRUPItQ/exec';
 const SC=[{c:'#4338CA',bg:'#EEF2FF',bd:'#A5B4FC'},{c:'#1D4ED8',bg:'#DBEAFE',bd:'#93C5FD'},{c:'#059669',bg:'#D1FAE5',bd:'#6EE7B7'},{c:'#DC2626',bg:'#FEE2E2',bd:'#FCA5A5'},{c:'#D97706',bg:'#FEF3C7',bd:'#FCD34D'},{c:'#7C3AED',bg:'#EDE9FE',bd:'#C4B5FD'},{c:'#0369A1',bg:'#E0F2FE',bd:'#7DD3FC'},{c:'#374151',bg:'#F3F4F6',bd:'#D1D5DB'}];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SH=7,EH=18,DMINS=(EH-SH)*60,SLOT=30,SCOLS=DMINS/SLOT,SW=36,NW=120;
@@ -728,7 +728,7 @@ function renderDailyTable(date,sl){
     allT(s.id,day).forEach(t=>{
       const si=slotOf(t.sm),ei=slotOf(t.em),left=NW+si*SW+1,width=Math.max((ei-si)*SW-2,10);
       const done2=isDone(s.id,day,t.id);const safeId=String(t.id).replace(/'/g,"\'");
-      blks+=`<div class="blk${done2?' done':''}" data-ri="${ri}" data-slot="${si}" data-span="${span}" style="left:${left}px;width:${width}px;background:${c.bg};color:${c.c};border-color:${c.bd}" onclick="openEdit(${s.id},'${day}','${safeId}')">
+      blks+=`<div class="blk${done2?' done':''}" data-ri="${ri}" style="left:${left}px;width:${width}px;background:${c.bg};color:${c.c};border-color:${c.bd}" onclick="openEdit(${s.id},'${day}','${safeId}')">
         ${t.isRec?'↺ ':''}${done2?'✓ ':''}
         <span class="lbl">${t.label}</span><span class="t2">${fmtT(t.sm)}</span></div>`;
     });
