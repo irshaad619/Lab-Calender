@@ -499,7 +499,7 @@ function renderHome(){
   staff.forEach(s=>{allT(s.id,todayKey).forEach(t=>{todayTasks2.push({s,t,done:isDone(s.id,todayKey,t.id)});});});
   todayTasks2.sort((a,b)=>a.t.sm-b.t.sm);
   const ts=document.getElementById('todaySchedule');
-  if(!todayTasks2.length){ts.innerHTML='<div style="color:#9CA3AF;font-size:13px;text-align:center;padding:16px">No tasks scheduled for today</div>';}
+  if(!todayTasks2.length){ts.innerHTML='<div style="color:#9CA3AF;font-size:13px;text-align:center;padding:16px">'+(staff.length===0?'⏳ Loading data…':'No tasks scheduled for today')+'</div>';}
   else{
     const done=todayTasks2.filter(x=>x.done).length;
     const pct=Math.round(done/todayTasks2.length*100);
@@ -858,8 +858,8 @@ async function deleteSample(rowId){
 
 // ── INIT ───────────────────────────────────────────────────────────────────
 // Set today date in welcome
-document.getElementById('welcomeDate').innerHTML='<div style="font-size:14px;opacity:.8">Loading…</div>';
-
+// Render home immediately with date - data fills in after load
+renderHome();
 renderCal();
 loadAll();
 </script>
