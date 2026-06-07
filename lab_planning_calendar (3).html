@@ -387,7 +387,7 @@ async function loadAll(){
         else{if(!day)return;const k=tk(sid,day);if(!taskStore[k])taskStore[k]=[];taskStore[k].push({id:row.Id,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime)});if(done)compStore[ck(sid,day,row.Id)]=true;const n=parseInt(String(row.Id).replace('t',''))||0;if(n>=nextTid)nextTid=n+1;}
       });
     }
-    if(json.samples!==undefined){samples=json.samples.map(s=>({id:s.Id||'',client:s.Client||'',testType:s.TestType||'',matrix:s.Matrix||'',quantity:s.Quantity||'',receptionDate:s.ReceptionDate||'',receptionTime:s.ReceptionTime||'',testStartDate:s.TestStartDate||'',testEndDate:s.TestEndDate||'',reportSentDate:s.ReportSentDate||'',assignedTo:s.AssignedTo||'',status:s.Status||'Sample received',notes:s.Notes||'',priority:s.Priority||'Normal',rowId:s.RowId||'',overdueComment:s.OverdueComment||'',reportSentLate:s.ReportSentLate||'',daysOverdue:s.DaysOverdue||'',poNumber:s.PONumber||''});));}
+    if(json.samples!==undefined){samples=json.samples.map(s=>({id:s.Id||'',client:s.Client||'',testType:s.TestType||'',matrix:s.Matrix||'',quantity:s.Quantity||'',receptionDate:s.ReceptionDate||'',receptionTime:s.ReceptionTime||'',testStartDate:s.TestStartDate||'',testEndDate:s.TestEndDate||'',reportSentDate:s.ReportSentDate||'',assignedTo:s.AssignedTo||'',status:s.Status||'Sample received',notes:s.Notes||'',priority:s.Priority||'Normal',rowId:s.RowId||'',overdueComment:s.OverdueComment||'',reportSentLate:s.ReportSentLate||'',daysOverdue:s.DaysOverdue||'',poNumber:s.PONumber||''}));}
     setSyncStatus('ok','Live — '+new Date().toLocaleTimeString());
   }catch(e){setSyncStatus('err','Could not connect.');}
   renderCal();renderReg();renderRegStats();renderHome();updateOverdueBadge();
@@ -535,7 +535,7 @@ function saveLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify({taskStore,c
 function markUnsaved(){saveLocal();document.getElementById('saveStatus').innerHTML='<span style="color:#F59E0B;font-weight:600">⚠ Unsaved changes</span>';}
 
 function buildTaskRows(){const rows=[];Object.keys(taskStore).forEach(key=>{(taskStore[key]||[]).forEach(t=>{const parts=key.split('|');const sid=parseInt(parts[0]),day=parts[1];const done=compStore[ck(sid,day,t.id)]?'TRUE':'FALSE';const sm=staff.find(s=>s.id===sid)||{name:''};rows.push({Id:String(t.id),StaffId:sid,StaffName:sm.name,DayKey:day,TaskLabel:t.label,StartTime:t.sm,EndTime:t.em,IsRecurring:'FALSE',RecurDays:'',IsDone:done});});});recurStore.forEach(r=>{const sm=staff.find(s=>s.id===r.sid)||{name:''};rows.push({Id:String(r.id),StaffId:r.sid,StaffName:sm.name,DayKey:'',TaskLabel:r.label,StartTime:r.sm,EndTime:r.em,IsRecurring:'TRUE',RecurDays:r.days,IsDone:'FALSE'});});return rows;}
-function buildSampleRows(){return samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,ReceptionTime:s.receptionTime||'',TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId,OverdueComment:s.overdueComment||'',ReportSentLate:s.reportSentLate||'',DaysOverdue:s.daysOverdue||'',PONumber:s.poNumber||''});));}
+function buildSampleRows(){return samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,ReceptionTime:s.receptionTime||'',TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId,OverdueComment:s.overdueComment||'',ReportSentLate:s.reportSentLate||'',DaysOverdue:s.daysOverdue||'',PONumber:s.poNumber||''}));}
 
 async function postSave(action,payload){try{await fetch(API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...payload})});return{status:'ok'};}catch(e){throw e;}}
 async function saveTasks(){return postSave('write',{rows:buildTaskRows()});}
@@ -568,7 +568,7 @@ function renderCal(){
   const d=getDate(),sl=filteredStaff();
   const days=view==='daily'?[getDK(d)]:(()=>{const a=[];for(let i=0;i<7;i++){const x=new Date(d);x.setDate(x.getDate()+i);a.push(getDK(x));}return a;})();
   let total=0,done=0,hrs=0;
-  sl.forEach(s=>days.forEach(dk=>{allT(s.id,dk).forEach(t=>{total++;if(isDone(s.id,dk,t.id))done++;hrs+=(t.em-t.sm)/60;});});
+  sl.forEach(s=>days.forEach(dk=>{allT(s.id,dk).forEach(t=>{total++;if(isDone(s.id,dk,t.id))done++;hrs+=(t.em-t.sm)/60;});}))
   document.getElementById('calStats').innerHTML=`
     <div class="stat-card"><div class="stat-lbl">Staff</div><div class="stat-val">${sl.length}</div></div>
     <div class="stat-card"><div class="stat-lbl">Tasks</div><div class="stat-val blue">${total}</div></div>
@@ -635,17 +635,34 @@ function renderWeekly(startDate,sl){
 }
 
 function renderReview(sl){
-  const day=getDK(getDate());let all2=[];
-  sl.forEach(s=>allT(s.id,day).forEach(t=>all2.push({s,t,done:isDone(s.id,day,t.id)})));
-  const dn=all2.filter(x=>x.done).length;
-  const pct=all2.length?Math.round(dn/all2.length*100):0;
-  const barCol=pct===100?'#10B981':pct>=50?'#F59E0B':'#3B82F6';
-  let h=`<div class="rev"><div class="rev-hd"><span>✓ Daily review — ${fmt(getDate())}</span><span style="font-size:12px;font-weight:400;color:#6B7280">${dn}/${all2.length} completed · ${pct}%</span></div>`;
-  h+=`<div style="height:4px;background:#f3f4f6"><div style="height:4px;width:${pct}%;background:${barCol};transition:width .4s"></div></div>`;
-  if(!all2.length){h+=`<div style="padding:24px;text-align:center;color:#9CA3AF;font-size:13px">No tasks today. Click any time slot to add one.</div>`;}
-  else{all2.forEach(({s,t,done2})=>{const c=sc(s);const safeId=String(t.id).replace(/'/g,"\'");
-    h+=`<div class="rev-row"><button class="chk${isDone(s.id,day,t.id)?' done':''}" onclick="toggleDone(${s.id},'${day}','${safeId}')">${isDone(s.id,day,t.id)?'✓':''}</button><div class="av" style="background:${c.bg};color:${c.c};width:24px;height:24px;font-size:9px">${ini(s.name)}</div><div style="flex:1;min-width:0"><div style="font-size:13px;${isDone(s.id,day,t.id)?'text-decoration:line-through;opacity:.5':''};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.label}</div><div style="font-size:11px;color:#6B7280">${s.name} · ${fmtT(t.sm)}–${fmtT(t.em)}${t.isRec?' · ↺':''}</div></div><span style="font-size:11px;font-weight:600;color:${isDone(s.id,day,t.id)?'#10B981':'#9CA3AF'};flex-shrink:0;margin-left:8px">${isDone(s.id,day,t.id)?'✓ Done':'Pending'}</span></div>`;}))}
-  h+=`</div>`;document.getElementById('reviewDiv').innerHTML=h;
+  var day=getDK(getDate());
+  var all2=[];
+  sl.forEach(function(s){allT(s.id,day).forEach(function(t){all2.push({s:s,t:t});});});
+  var dn=0;all2.forEach(function(x){if(isDone(x.s.id,day,x.t.id))dn++;});
+  var pct=all2.length?Math.round(dn/all2.length*100):0;
+  var barCol=pct===100?'#10B981':pct>=50?'#F59E0B':'#3B82F6';
+  var h='<div class="rev">';
+  h+='<div class="rev-hd"><span>&#10003; Daily review &mdash; '+fmt(getDate())+'</span>';
+  h+='<span style="font-size:12px;font-weight:400;color:#6B7280">'+dn+'/'+all2.length+' completed &middot; '+pct+'%</span></div>';
+  h+='<div style="height:4px;background:#f3f4f6"><div style="height:4px;width:'+pct+'%;background:'+barCol+';transition:width .4s"></div></div>';
+  if(!all2.length){h+='<div style="padding:24px;text-align:center;color:#9CA3AF;font-size:13px">No tasks today. Click any slot to add one.</div>';}
+  else{
+    all2.forEach(function(item){
+      var s=item.s,t=item.t,c=sc(s),done=isDone(s.id,day,t.id);
+      var sid=s.id,safeDay=day,safeTid=String(t.id);
+      h+='<div class="rev-row">';
+      var oc="toggleDone("+sid+",'"+safeDay+"','"+safeTid+"')";h+='<button class="chk'+(done?' done':'')+'" onclick="'+oc+'">'+((done)?'&#10003;':'')+'</button>';
+      h+='<div class="av" style="background:'+c.bg+';color:'+c.c+';width:24px;height:24px;font-size:9px">'+ini(s.name)+'</div>';
+      h+='<div style="flex:1;min-width:0">';
+      h+='<div style="font-size:13px;'+(done?'text-decoration:line-through;opacity:.5':'')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+t.label+'</div>';
+      h+='<div style="font-size:11px;color:#6B7280">'+s.name+' &middot; '+fmtT(t.sm)+'&ndash;'+fmtT(t.em)+(t.isRec?' &middot; &#8635;':'')+'</div>';
+      h+='</div>';
+      h+='<span style="font-size:11px;font-weight:600;color:'+(done?'#10B981':'#9CA3AF')+';flex-shrink:0;margin-left:8px">'+(done?'&#10003; Done':'Pending')+'</span>';
+      h+='</div>';
+    });
+  }
+  h+='</div>';
+  document.getElementById('reviewDiv').innerHTML=h;
 }
 
 // ── CALENDAR MODALS ────────────────────────────────────────────────────────
