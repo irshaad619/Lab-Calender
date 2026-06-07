@@ -206,14 +206,7 @@ table.cal th.shd:last-child,table.cal td.sc2:last-child{width:auto !important}
   <button class="nav-item" onclick="alert('Weekly email report runs automatically every Saturday at 7am to iemambocus@Abiolabs.com')">
     <span class="icon">📧</span> Weekly Report
   </button>
-  <div class="sidebar-divider"></div>
-  <div class="sidebar-section" id="finance-section-label" style="display:none">Finance</div>
-  <button class="nav-item" id="nav-invoicing" style="display:none" onclick="switchTab('invoicing',this)">
-    <span class="icon">💼</span> Invoicing
-  </button>
-  <button class="nav-item" id="btn-invoice-lock" onclick="handleInvoiceAccess()" style="color:rgba(255,255,255,0.4);font-size:12px">
-    <span class="icon" style="font-size:13px">🔐</span> Finance Login
-  </button>
+
 
   <div style="margin-top:auto;padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:8px">
     <span style="width:7px;height:7px;background:#10B981;border-radius:50%;display:inline-block;box-shadow:0 0 6px #10B981;flex-shrink:0"></span>
@@ -350,64 +343,6 @@ table.cal th.shd:last-child,table.cal td.sc2:last-child{width:auto !important}
   </div>
 </div>
 
-<!-- ══ INVOICING PAGE ══ -->
-<div class="page" id="page-invoicing">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
-    <div style="font-size:16px;font-weight:700;color:#1a1a2e">💼 Invoicing</div>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:7px 12px">
-        <span style="font-size:12px;color:#6B7280;font-weight:600">Default rate this month:</span>
-        <span style="font-size:12px;color:#6B7280">1 EUR =</span>
-        <input id="defaultRate" type="number" step="0.01" value="47.50" style="width:70px;border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;font-size:13px;font-weight:600;color:#0B7A8B;outline:none">
-        <span style="font-size:12px;color:#6B7280">MUR</span>
-      </div>
-      <button onclick="openAddInvoice()" style="background:linear-gradient(135deg,#0B7A8B,#064E5A);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer">+ New invoice</button>
-    </div>
-  </div>
-
-  <!-- Monthly summary cards -->
-  <div id="invSummary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px"></div>
-
-  <!-- Month filter -->
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-    <select id="invMonthFilter" onchange="renderInvoices()" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:#fff;outline:none;font-weight:600">
-      <option value="">All months</option>
-    </select>
-    <select id="invStatusFilter" onchange="renderInvoices()" style="padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:#fff;outline:none">
-      <option value="">All statuses</option>
-      <option value="pending">Pending</option>
-      <option value="sent">Sent</option>
-    </select>
-    <input id="invSearch" placeholder="🔍 Search client, invoice n°…" oninput="renderInvoices()" style="flex:1;min-width:180px;padding:9px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;outline:none">
-    <button onclick="exportInvoiceCSV()" style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;color:#374151">📥 Export CSV</button>
-  </div>
-
-  <!-- Invoice table -->
-  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;overflow-x:auto;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
-    <table style="width:100%;border-collapse:collapse;min-width:1200px">
-      <thead>
-        <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb">
-          <th style="padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap">Reception Date</th>
-          <th style="padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.3px">Client</th>
-          <th style="padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.3px">Test Type</th>
-          <th style="padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap">PO / Quote Ref</th>
-          <th style="padding:11px 12px;text-align:right;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap">Price MUR<br><span style="font-weight:400;font-size:10px">(Exc VAT)</span></th>
-          <th style="padding:11px 12px;text-align:right;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap">Price EUR<br><span style="font-weight:400;font-size:10px">(Exc VAT)</span></th>
-          <th style="padding:11px 12px;text-align:right;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap">Rate<br><span style="font-weight:400;font-size:10px">1 EUR = X MUR</span></th>
-          <th style="padding:11px 12px;text-align:right;font-size:11px;font-weight:700;color:#0B7A8B;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap">EUR→MUR</th>
-          <th style="padding:11px 12px;text-align:right;font-size:11px;font-weight:700;color:#064E5A;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap">Total MUR</th>
-          <th style="padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap">Invoice n°</th>
-          <th style="padding:11px 12px;text-align:center;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.3px">Sent</th>
-          <th style="padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap">Date Sent</th>
-          <th style="padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.3px">Remarks</th>
-          <th style="padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.3px">Actions</th>
-        </tr>
-      </thead>
-      <tbody id="invBody"></tbody>
-    </table>
-  </div>
-</div>
-
 <!-- MODAL -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal" id="modalBox"></div>
@@ -479,7 +414,7 @@ async function loadAll(){
     if(json.samples!==undefined){samples=json.samples.map(s=>({id:s.Id||'',client:s.Client||'',testType:s.TestType||'',matrix:s.Matrix||'',quantity:s.Quantity||'',receptionDate:s.ReceptionDate||'',receptionTime:s.ReceptionTime||'',testStartDate:s.TestStartDate||'',testEndDate:s.TestEndDate||'',reportSentDate:s.ReportSentDate||'',assignedTo:s.AssignedTo||'',status:s.Status||'Sample received',notes:s.Notes||'',priority:s.Priority||'Normal',rowId:s.RowId||'',overdueComment:s.OverdueComment||'',reportSentLate:s.ReportSentLate||'',daysOverdue:s.DaysOverdue||'',poNumber:s.PONumber||''}));}
     setSyncStatus('ok','Live — '+new Date().toLocaleTimeString());
   }catch(e){setSyncStatus('err','Could not connect.');}
-  if(json&&json.invoices!==undefined){invoices=json.invoices.map(function(inv){return {receptionDate:inv.ReceptionDate||inv.receptionDate||'',client:inv.Client||inv.client||'',testType:inv.TestType||inv.testType||'',poRef:inv.PORef||inv.poRef||'',priceMUR:inv.PriceMUR||inv.priceMUR||'',priceEUR:inv.PriceEUR||inv.priceEUR||'',rate:inv.Rate||inv.rate||'',invoiceNo:inv.InvoiceNo||inv.invoiceNo||'',sent:inv.Sent||inv.sent||'No',dateSent:inv.DateSent||inv.dateSent||'',remarks:inv.Remarks||inv.remarks||'',rowId:inv.RowId||inv.rowId||('inv'+Math.random().toString(36).slice(2))};});}
+
   renderCal();renderReg();renderRegStats();renderHome();updateOverdueBadge();
   return Promise.resolve();
 }
@@ -559,7 +494,7 @@ function renderHome(){
       <div><div class="kpi-val">${totalSamples}</div><div class="kpi-label">Total samples</div><div class="kpi-trend">${activeSamples} active</div></div>
     </div>
     <div class="kpi-card" style="border-left-color:#EF4444" onclick="switchTab('registry',document.getElementById('nav-registry'))">
-      ${OVERDUE_ICON_HTML}
+      <div class="kpi-icon" style="background:linear-gradient(135deg,#EF4444,#DC2626);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center">🔔</div>
       <div><div class="kpi-val" style="color:#DC2626">${overdueCount}</div><div class="kpi-label">Overdue reports</div><div class="kpi-trend ${overdueCount>0?'down':'up'}">${overdueCount>0?'Action required':'All on track ✓'}</div></div>
     </div>
     <div class="kpi-card" style="border-left-color:#F59E0B" onclick="switchTab('registry',document.getElementById('nav-registry'))">
@@ -629,7 +564,7 @@ function renderHome(){
 
 // ── SAVE ───────────────────────────────────────────────────────────────────
 const LS_KEY='abiolabs_lms_v3';
-function saveLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify({taskStore,compStore,recurStore,samples,invoices,nextTid,nextRid,ts:Date.now()}));}catch(e){}}
+function saveLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify({taskStore,compStore,recurStore,samples,nextTid,nextRid,ts:Date.now()}));}catch(e){}}
 function markUnsaved(){saveLocal();document.getElementById('saveStatus').innerHTML='<span style="color:#F59E0B;font-weight:600">⚠ Unsaved changes</span>';}
 
 function buildTaskRows(){const rows=[];Object.keys(taskStore).forEach(key=>{(taskStore[key]||[]).forEach(t=>{const parts=key.split('|');const sid=parseInt(parts[0]),day=parts[1];const done=compStore[ck(sid,day,t.id)]?'TRUE':'FALSE';const sm=staff.find(s=>s.id===sid)||{name:''};rows.push({Id:String(t.id),StaffId:sid,StaffName:sm.name,DayKey:day,TaskLabel:t.label,StartTime:t.sm,EndTime:t.em,IsRecurring:'FALSE',RecurDays:'',IsDone:done});});});recurStore.forEach(r=>{const sm=staff.find(s=>s.id===r.sid)||{name:''};rows.push({Id:String(r.id),StaffId:r.sid,StaffName:sm.name,DayKey:'',TaskLabel:r.label,StartTime:r.sm,EndTime:r.em,IsRecurring:'TRUE',RecurDays:r.days,IsDone:'FALSE'});});return rows;}
@@ -638,7 +573,6 @@ function buildSampleRows(){return samples.map(s=>({Id:s.id,Client:s.client,TestT
 async function postSave(action,payload){try{await fetch(API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...payload})});return{status:'ok'};}catch(e){throw e;}}
 async function saveTasks(){return postSave('write',{rows:buildTaskRows()});}
 async function saveSamples(){return postSave('writeSamples',{samples:buildSampleRows()});}
-async function saveInvoicesToSheet(){return postSave('writeInvoices',{invoices:invoices});}
 
 async function manualSave(){
   const btn=document.getElementById('saveBtn');
@@ -647,7 +581,7 @@ async function manualSave(){
   saveLocal();
   status.innerHTML='<span style="color:#6B7280">Sending to server…</span>';
   try{
-    await saveTasks();await saveSamples();if(invoices.length)await saveInvoicesToSheet();
+    await saveTasks();await saveSamples();
     await new Promise(r=>setTimeout(r,3000));
     const json=await jsonp(API_URL+'?action=readAll').catch(()=>null);
     if(json&&json.data!==undefined){
@@ -1073,283 +1007,6 @@ async function deleteSample(rowId){
 }
 
 
-// ══════════════════════════════════════════════════════════════
-// ── INVOICING MODULE ─────────────────────────────────────────
-// ══════════════════════════════════════════════════════════════
-const INVOICE_PIN = '2024'; // Change this to your preferred PIN
-let invoiceUnlocked = false;
-let invoices = [];
-
-function handleInvoiceAccess(){
-  if(invoiceUnlocked){
-    // Lock it
-    invoiceUnlocked = false;
-    document.getElementById('nav-invoicing').style.display = 'none';
-    document.getElementById('finance-section-label').style.display = 'none';
-    document.getElementById('btn-invoice-lock').innerHTML = '<span class="icon" style="font-size:13px">🔐</span> Finance Login';
-    document.getElementById('btn-invoice-lock').style.color = 'rgba(255,255,255,0.4)';
-    // Switch away if on invoicing
-    if(document.getElementById('page-invoicing').classList.contains('active')){
-      switchTab('home', document.getElementById('nav-home'));
-    }
-    return;
-  }
-  var pin = prompt('Enter Finance PIN to access Invoicing:');
-  if(pin === null) return;
-  if(pin === INVOICE_PIN){
-    invoiceUnlocked = true;
-    document.getElementById('nav-invoicing').style.display = 'flex';
-    document.getElementById('finance-section-label').style.display = '';
-    document.getElementById('btn-invoice-lock').innerHTML = '<span class="icon">🔓</span> Lock Finance';
-    document.getElementById('btn-invoice-lock').style.color = '';
-    setTimeout(()=>{
-      switchTab('invoicing', document.getElementById('nav-invoicing'));
-    }, 100);
-    // Load invoices from localStorage
-    try{
-      var raw=localStorage.getItem(LS_KEY);
-      if(raw){var d=JSON.parse(raw);if(d.invoices)invoices=d.invoices;}
-    }catch(e){}
-    populateMonthFilter();
-    renderInvoices();
-  } else {
-    alert('Incorrect PIN.');
-  }
-}
-
-function fmtMUR(v){
-  if(!v && v!==0) return '—';
-  return 'Rs ' + parseFloat(v).toLocaleString('en-MU', {minimumFractionDigits:2, maximumFractionDigits:2});
-}
-function fmtEUR(v){
-  if(!v && v!==0) return '—';
-  return '€ ' + parseFloat(v).toLocaleString('en-EU', {minimumFractionDigits:2, maximumFractionDigits:2});
-}
-
-function calcInvoice(inv){
-  var priceMUR = parseFloat(inv.priceMUR) || 0;
-  var priceEUR = parseFloat(inv.priceEUR) || 0;
-  var rate = parseFloat(inv.rate) || 0;
-  var eurInMUR = priceEUR * rate;
-  var totalMUR = priceMUR + eurInMUR;
-  return {eurInMUR, totalMUR};
-}
-
-function renderInvSummary(){
-  var filtered = getFilteredInvoices();
-  var totalMUR = 0, totalEUR = 0, sent = 0, pending = 0;
-  filtered.forEach(function(inv){
-    var c = calcInvoice(inv);
-    totalMUR += c.totalMUR;
-    totalEUR += parseFloat(inv.priceEUR)||0;
-    if(inv.sent === 'Yes') sent++; else pending++;
-  });
-  document.getElementById('invSummary').innerHTML =
-    '<div style="background:linear-gradient(135deg,#064E5A,#0B7A8B);border-radius:14px;padding:16px 20px;color:#fff;box-shadow:0 4px 15px rgba(11,122,139,0.3)">' +
-    '<div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px">Total Revenue (MUR)</div>' +
-    '<div style="font-size:24px;font-weight:800;margin:6px 0">Rs ' + totalMUR.toLocaleString('en-MU',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
-    '<div style="font-size:11px;opacity:.7">incl. EUR conversions</div></div>' +
-
-    '<div style="background:linear-gradient(135deg,#1B3A6B,#2563eb);border-radius:14px;padding:16px 20px;color:#fff;box-shadow:0 4px 15px rgba(37,99,235,0.3)">' +
-    '<div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px">Total Revenue (EUR)</div>' +
-    '<div style="font-size:24px;font-weight:800;margin:6px 0">€ ' + totalEUR.toLocaleString('en-EU',{minimumFractionDigits:2,maximumFractionDigits:2}) + '</div>' +
-    '<div style="font-size:11px;opacity:.7">before conversion</div></div>' +
-
-    '<div style="background:linear-gradient(135deg,#059669,#10B981);border-radius:14px;padding:16px 20px;color:#fff;box-shadow:0 4px 15px rgba(16,185,129,0.3)">' +
-    '<div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px">Invoices Sent</div>' +
-    '<div style="font-size:32px;font-weight:800;margin:4px 0">' + sent + '</div>' +
-    '<div style="font-size:11px;opacity:.7">of ' + filtered.length + ' total</div></div>' +
-
-    '<div style="background:linear-gradient(135deg,#D97706,#F59E0B);border-radius:14px;padding:16px 20px;color:#fff;box-shadow:0 4px 15px rgba(245,158,11,0.3)">' +
-    '<div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px">Pending Invoices</div>' +
-    '<div style="font-size:32px;font-weight:800;margin:4px 0">' + pending + '</div>' +
-    '<div style="font-size:11px;opacity:.7">awaiting dispatch</div></div>';
-}
-
-function populateMonthFilter(){
-  var months = {};
-  invoices.forEach(function(inv){
-    if(inv.receptionDate){
-      var d = new Date(inv.receptionDate);
-      if(!isNaN(d.getTime())){
-        var key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-        var label = d.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
-        months[key] = label;
-      }
-    }
-  });
-  var sel = document.getElementById('invMonthFilter');
-  var cur = sel.value;
-  sel.innerHTML = '<option value="">All months</option>';
-  Object.keys(months).sort().reverse().forEach(function(k){
-    var opt = document.createElement('option');
-    opt.value = k; opt.textContent = months[k];
-    if(k===cur) opt.selected = true;
-    sel.appendChild(opt);
-  });
-}
-
-function getFilteredInvoices(){
-  var month = document.getElementById('invMonthFilter').value;
-  var status = document.getElementById('invStatusFilter').value;
-  var search = (document.getElementById('invSearch').value||'').toLowerCase();
-  return invoices.filter(function(inv){
-    var mMatch = true;
-    if(month && inv.receptionDate){
-      var d = new Date(inv.receptionDate);
-      if(!isNaN(d.getTime())){
-        var k = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-        mMatch = k === month;
-      } else mMatch = false;
-    } else if(month) mMatch = false;
-    var sMatch = !status || (status==='sent'&&inv.sent==='Yes') || (status==='pending'&&inv.sent!=='Yes');
-    var qMatch = !search || [inv.client,inv.invoiceNo,inv.poRef,inv.testType].some(function(v){return String(v||'').toLowerCase().includes(search);});
-    return mMatch && sMatch && qMatch;
-  });
-}
-
-function renderInvoices(){
-  populateMonthFilter();
-  renderInvSummary();
-  var filtered = getFilteredInvoices();
-  var tbody = document.getElementById('invBody');
-  if(!filtered.length){
-    tbody.innerHTML = '<tr><td colspan="15" style="padding:48px;text-align:center;color:#9CA3AF;font-size:13px">No invoices found. Click "+ New invoice" to create one.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = filtered.map(function(inv){
-    var c = calcInvoice(inv);
-    var sentBadge = inv.sent==='Yes'
-      ? '<span style="background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700">✓ Sent</span>'
-      : '<span style="background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700">Pending</span>';
-    var rowBg = inv.sent==='Yes' ? '#FAFFFE' : '#FFFBEB';
-    return '<tr style="border-bottom:1px solid #f3f4f6;background:'+rowBg+'">' +
-      '<td style="padding:10px 12px;font-size:13px;white-space:nowrap">' + fmtDate(inv.receptionDate) + '</td>' +
-      '<td style="padding:10px 12px;font-size:13px;font-weight:600">' + (inv.client||'—') + '</td>' +
-      '<td style="padding:10px 12px;font-size:13px">' + (inv.testType||'—') + '</td>' +
-      '<td style="padding:10px 12px;font-size:12px;color:#0B7A8B;font-weight:600">' + (inv.poRef||'—') + '</td>' +
-      '<td style="padding:10px 12px;font-size:13px;text-align:right;font-weight:600">' + (inv.priceMUR?fmtMUR(inv.priceMUR):'—') + '</td>' +
-      '<td style="padding:10px 12px;font-size:13px;text-align:right;font-weight:600">' + (inv.priceEUR?fmtEUR(inv.priceEUR):'—') + '</td>' +
-      '<td style="padding:10px 12px;font-size:12px;text-align:right;color:#6B7280">' + (inv.rate?inv.rate+' MUR':'—') + '</td>' +
-      '<td style="padding:10px 12px;font-size:13px;text-align:right;color:#0B7A8B">' + (c.eurInMUR?fmtMUR(c.eurInMUR):'—') + '</td>' +
-      '<td style="padding:10px 12px;font-size:13px;text-align:right;font-weight:800;color:#064E5A">' + fmtMUR(c.totalMUR) + '</td>' +
-      '<td style="padding:10px 12px;font-size:13px;font-weight:600">' + (inv.invoiceNo||'—') + '</td>' +
-      '<td style="padding:10px 12px;text-align:center">' + sentBadge + '</td>' +
-      '<td style="padding:10px 12px;font-size:12px;color:#6B7280;white-space:nowrap">' + fmtDate(inv.dateSent) + '</td>' +
-      '<td style="padding:10px 12px;font-size:12px;color:#6B7280;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (inv.remarks||'') + '</td>' +
-      '<td style="padding:10px 12px"><div style="display:flex;gap:4px">' +
-        '<button onclick="openEditInvoice(\"'+inv.rowId+'\")" style="background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#374151">&#9998; Edit</button>' +
-        '<button onclick="deleteInvoice(\"'+inv.rowId+'\")" style="background:none;border:1px solid #FCA5A5;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#DC2626">&#10005;</button>' +
-      '</div></td>' +
-    '</tr>';
-  }).join('');
-}
-
-function invoiceForm(inv){
-  inv = inv || {};
-  var defaultRate = document.getElementById('defaultRate').value || '47.50';
-  // Build client suggestions from samples
-  var clientOpts = [...new Set(samples.filter(function(s){return s.client;}).map(function(s){return s.client;}))];
-  // Build sample suggestions for auto-fill
-  var sampleOpts = samples.map(function(s,i){
-    return '<option value="'+i+'" data-client="'+(s.client||'')+'" data-test="'+(s.testType||'')+'" data-date="'+(s.receptionDate||'')+'">'+(s.client||'')+(s.testType?' — '+s.testType:'')+(s.receptionDate?' ('+fmtDate(s.receptionDate)+')':'')+'</option>';
-  }).join('');
-
-  return '<div class="shd2">Link to sample (optional — auto-fills fields)</div>' +
-    '<div class="fg"><div class="field"><label>Select from registry</label>' +
-    '<select id="i-sample" onchange="autoFillInvoice()">' +
-    '<option value="">— Select sample —</option>' + sampleOpts +
-    '</select></div></div>' +
-
-    '<div class="shd2">Invoice details</div>' +
-    '<div class="fg">' +
-    '<div class="field"><label>Reception date</label><input type="date" id="i-date" value="'+(inv.receptionDate||'')+'"></div>' +
-    '<div class="field"><label>Client *</label><input id="i-client" value="'+(inv.client||'')+'" placeholder="Client name" list="inv-client-list"><datalist id="inv-client-list">'+clientOpts.map(function(c){return '<option value="'+c+'">';}).join('')+'</datalist></div>' +
-    '<div class="field"><label>Test type</label><input id="i-test" value="'+(inv.testType||'')+'" placeholder="e.g. Microbiology"></div>' +
-    '<div class="field"><label>PO / Quote Ref</label><input id="i-poref" value="'+(inv.poRef||'')+'" placeholder="e.g. PO-2026-001"></div>' +
-    '</div>' +
-
-    '<div class="shd2">Pricing & Currency</div>' +
-    '<div class="fg">' +
-    '<div class="field"><label>Price MUR (Exc VAT)</label><input type="number" step="0.01" id="i-mur" value="'+(inv.priceMUR||'')+'" placeholder="0.00" oninput="updateInvCalc()"></div>' +
-    '<div class="field"><label>Price EUR (Exc VAT)</label><input type="number" step="0.01" id="i-eur" value="'+(inv.priceEUR||'')+'" placeholder="0.00" oninput="updateInvCalc()"></div>' +
-    '<div class="field"><label>Exchange rate (1 EUR = X MUR)</label><input type="number" step="0.0001" id="i-rate" value="'+(inv.rate||defaultRate)+'" placeholder="47.50" oninput="updateInvCalc()"></div>' +
-    '<div class="field"><label style="color:#0B7A8B">EUR converted to MUR</label><input id="i-eurMUR" readonly style="background:#f0f9ff;color:#0B7A8B;font-weight:700" value="'+(inv.priceEUR&&inv.rate?fmtMUR(parseFloat(inv.priceEUR)*parseFloat(inv.rate)):'')+'"></div>' +
-    '</div>' +
-    '<div style="background:linear-gradient(135deg,#f0f9ff,#e0f5f7);border:2px solid #0B7A8B;border-radius:10px;padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">' +
-    '<span style="font-size:13px;font-weight:700;color:#064E5A">Total MUR (inc. EUR converted)</span>' +
-    '<span id="i-totalMUR" style="font-size:20px;font-weight:800;color:#064E5A">Rs 0.00</span>' +
-    '</div>' +
-
-    '<div class="shd2">Invoice status</div>' +
-    '<div class="fg">' +
-    '<div class="field"><label>Invoice n°</label><input id="i-invno" value="'+(inv.invoiceNo||'')+'" placeholder="e.g. INV-2026-001"></div>' +
-    '<div class="field"><label>Sent</label><select id="i-sent"><option value="No"'+(inv.sent!=='Yes'?' selected':'')+'>No — Pending</option><option value="Yes"'+(inv.sent==='Yes'?' selected':'')+'>Yes — Sent</option></select></div>' +
-    '<div class="field"><label>Date sent</label><input type="date" id="i-datesent" value="'+(inv.dateSent||'')+'"></div>' +
-    '</div>' +
-    '<div class="fg full"><div class="field"><label>Remarks</label><textarea id="i-remarks">'+(inv.remarks||'')+'</textarea></div></div>';
-}
-
-function updateInvCalc(){
-  var eur = parseFloat(document.getElementById('i-eur').value)||0;
-  var rate = parseFloat(document.getElementById('i-rate').value)||0;
-  var mur = parseFloat(document.getElementById('i-mur').value)||0;
-  var eurMUR = eur * rate;
-  var total = mur + eurMUR;
-  var eurMUREl = document.getElementById('i-eurMUR');
-  var totalEl = document.getElementById('i-totalMUR');
-  if(eurMUREl) eurMUREl.value = eur>0&&rate>0 ? fmtMUR(eurMUR) : '';
-  if(totalEl) totalEl.textContent = 'Rs ' + total.toLocaleString('en-MU',{minimumFractionDigits:2,maximumFractionDigits:2});
-}
-
-function autoFillInvoice(){
-  var sel = document.getElementById('i-sample');
-  var idx = parseInt(sel.value);
-  if(isNaN(idx)||idx<0||idx>=samples.length) return;
-  var s = samples[idx];
-  var clientEl = document.getElementById('i-client');
-  var testEl = document.getElementById('i-test');
-  var dateEl = document.getElementById('i-date');
-  if(clientEl) clientEl.value = s.client||'';
-  if(testEl) testEl.value = s.testType||'';
-  if(dateEl) dateEl.value = s.receptionDate||'';
-}
-
-function getInvoiceFormData(){
-  return {
-    receptionDate: document.getElementById('i-date').value,
-    client: document.getElementById('i-client').value.trim(),
-    testType: document.getElementById('i-test').value.trim(),
-    poRef: document.getElementById('i-poref').value.trim(),
-    priceMUR: document.getElementById('i-mur').value,
-    priceEUR: document.getElementById('i-eur').value,
-    rate: document.getElementById('i-rate').value,
-    invoiceNo: document.getElementById('i-invno').value.trim(),
-    sent: document.getElementById('i-sent').value,
-    dateSent: document.getElementById('i-datesent').value,
-    remarks: document.getElementById('i-remarks').value.trim()
-  };
-}
-
-function openAddInvoice(){
-  openModal('<h3>💼 New Invoice</h3>' + invoiceForm() +
-    '<div class="ma"><button class="bc" onclick="closeModal()">Cancel</button>' +
-    '<button class="bp" onclick="saveInvoice(null)">Save invoice</button></div>');
-  updateInvCalc();
-}
-
-function openEditInvoice(rowId){
-  var inv = invoices.find(function(x){return x.rowId===rowId;});
-  if(!inv) return;
-  window._currentInvId = rowId;
-  openModal('<h3>&#9998; Edit Invoice</h3>' + invoiceForm(inv) +
-    '<div class="ma">' +
-    '<button class="bd" onclick="deleteInvoice(window._currentInvId)">Delete</button>' +
-    '<button class="bc" onclick="closeModal()">Cancel</button>' +
-    '<button class="bp" onclick="saveInvoice(window._currentInvId)">Save changes</button>' +
-    '</div>');
-  updateInvCalc();
-}
 // ── STARTUP ───────────────────────────────────────────────────────────────
 renderHome();
 renderCal();
