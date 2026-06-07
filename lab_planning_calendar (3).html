@@ -400,8 +400,7 @@ table.cal th.shd:last-child,table.cal td.sc2:last-child{width:auto !important}
           <th style="padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap">PO / Quote Ref</th>
           <th style="padding:11px 12px;text-align:right;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap">Price MUR<br><span style="font-weight:400;font-size:10px;text-transform:none">(Exc VAT)</span></th>
           <th style="padding:11px 12px;text-align:right;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap">Price EUR<br><span style="font-weight:400;font-size:10px;text-transform:none">(Exc VAT)</span></th>
-          <th style="padding:11px 12px;text-align:right;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap">Rate<br><span style="font-weight:400;font-size:10px;text-transform:none">1 EUR = X MUR</span></th>
-          <th style="padding:11px 12px;text-align:right;font-size:11px;font-weight:700;color:#0B7A8B;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap">EUR → MUR</th>
+
           <th style="padding:11px 12px;text-align:right;font-size:11px;font-weight:700;color:#064E5A;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap">Total MUR</th>
           <th style="padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap">Invoice n°</th>
           <th style="padding:11px 12px;text-align:center;font-size:11px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:.3px">Sent</th>
@@ -411,7 +410,7 @@ table.cal th.shd:last-child,table.cal td.sc2:last-child{width:auto !important}
         </tr>
       </thead>
       <tbody id="invBody">
-        <tr><td colspan="14" style="padding:48px;text-align:center;color:#9CA3AF">No invoices yet.</td></tr>
+        <tr><td colspan="12" style="padding:48px;text-align:center;color:#9CA3AF">No invoices yet.</td></tr>
       </tbody>
     </table>
   </div>
@@ -436,9 +435,9 @@ let nextTid=1,nextRid=1,view='daily',offset=0;
 const today=new Date();
 
 // ── ACCESS CONTROL ─────────────────────────────────────────────────────────
-const REGISTRY_EDIT_PIN='1234';
+const REGISTRY_EDIT_PIN='281087';
 let registryEditUnlocked=false;
-function checkEditAccess(cb){if(registryEditUnlocked){cb();return;}const p=prompt('Enter PIN to edit Sample Registry:');if(p===null)return;if(p===REGISTRY_EDIT_PIN){registryEditUnlocked=true;setTimeout(()=>{registryEditUnlocked=false;document.getElementById('lockBtn').innerHTML='🔒 Locked';document.getElementById('lockBtn').style.color='#374151';},30*60*1000);cb();}else{alert('Incorrect PIN. Contact your lab administrator.');}}
+function checkEditAccess(cb){if(registryEditUnlocked){cb();return;}const p=prompt('Enter PIN to edit Sample Registry:');if(p===null)return;if(p===REGISTRY_EDIT_PIN){registryEditUnlocked=true;setTimeout(()=>{registryEditUnlocked=false;document.getElementById('lockBtn').innerHTML='🔒 Locked';document.getElementById('lockBtn').style.color='#374151';},60*60*1000);cb();}else{alert('Incorrect PIN. Contact your lab administrator.');}}
 function lockedOpenAddSample(){checkEditAccess(()=>openAddSample());}
 function lockedOpenEditSample(rowId){checkEditAccess(()=>openEditSample(rowId));}
 function lockedOpenAssign(rowId){checkEditAccess(()=>openAssign(rowId));}
@@ -1096,7 +1095,7 @@ async function deleteSample(rowId){
 // ── FINANCE / INVOICING MODULE ────────────────────────
 // ══════════════════════════════════════════════════════
 
-const FINANCE_PIN = '2024';
+const FINANCE_PIN = 'Baleno2022';
 let financeUnlocked = false;
 
 function handleFinanceAccess(){
@@ -1258,7 +1257,7 @@ function renderInvoices(){
   });
 
   if(!filtered.length && !uninvoiced.length){
-    tbody.innerHTML='<tr><td colspan="14" style="padding:48px;text-align:center;color:#9CA3AF;font-size:13px">No invoices yet. All samples will appear here automatically.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="12" style="padding:48px;text-align:center;color:#9CA3AF;font-size:13px">No invoices yet. All samples will appear here automatically.</td></tr>';
     return;
   }
 
@@ -1269,8 +1268,6 @@ function renderInvoices(){
       '<td style="padding:10px 12px;font-size:13px;font-weight:600">'+s.client+'</td>'+
       '<td style="padding:10px 12px;font-size:13px">'+s.testType+'</td>'+
       '<td style="padding:10px 12px;font-size:12px;color:#0B7A8B;font-weight:600">'+(s.poNumber||'—')+'</td>'+
-      '<td style="padding:10px 12px;font-size:13px;text-align:right;color:#9CA3AF">—</td>'+
-      '<td style="padding:10px 12px;font-size:13px;text-align:right;color:#9CA3AF">—</td>'+
       '<td style="padding:10px 12px;font-size:13px;text-align:right;color:#9CA3AF">—</td>'+
       '<td style="padding:10px 12px;font-size:13px;text-align:right;color:#9CA3AF">—</td>'+
       '<td style="padding:10px 12px;font-size:13px;text-align:right;color:#9CA3AF">—</td>'+
