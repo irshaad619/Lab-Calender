@@ -366,6 +366,24 @@ table.cal th.shd:last-child,table.cal td.sc2:last-child{width:auto !important}
 
 <!-- ══ INVOICING PAGE ══ -->
 <div class="page" id="page-invoicing">
+
+  <!-- ── CALENDAR MONTH PICKER ── -->
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 6px rgba(0,0,0,0.06)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <div style="font-size:14px;font-weight:700;color:#1a1a2e">📆 Monthly Invoicing Overview</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button onclick="changeYear(-1)" style="background:#f3f4f6;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:16px;color:#374151">‹</button>
+        <span id="calPickerYear" style="font-size:15px;font-weight:700;color:#1a1a2e;min-width:50px;text-align:center">2026</span>
+        <button onclick="changeYear(1)" style="background:#f3f4f6;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:16px;color:#374151">›</button>
+      </div>
+    </div>
+    <!-- Month grid -->
+    <div id="calMonthPicker" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px"></div>
+  </div>
+
+  <!-- ── SELECTED MONTH SUMMARY CARD ── -->
+  <div id="selectedMonthCard" style="margin-bottom:16px;display:none"></div>
+
   <!-- Summary cards -->
 <div id="invSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px"></div>
 
@@ -387,17 +405,6 @@ table.cal th.shd:last-child,table.cal td.sc2:last-child{width:auto !important}
       style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;color:#374151;white-space:nowrap">
       📥 Export CSV
     </button>
-  </div>
-
-  <!-- Monthly Summary -->
-  <div id="monthlySummarySection" style="margin-bottom:20px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-size:14px;font-weight:700;color:#1a1a2e">📆 Monthly Summary</div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <select id="summaryYearFilter" onchange="renderMonthlySummary()" style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;background:#fff;outline:none;font-weight:600"></select>
-      </div>
-    </div>
-    <div id="monthlySummaryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
   </div>
 
   <!-- Table -->
@@ -1505,7 +1512,10 @@ function exportInvoiceCSV(){
 }
 
 
-// ── MONTHLY SUMMARY ──────────────────────────────────────────────────────────
+// ── MONTHLY SUMMARY & CALENDAR PICKER ───────────────────────────────────────
+
+var calPickerYear = new Date().getFullYear();
+var selectedMonthKey = null;
 
 function getMonthKey(dateStr){
   if(!dateStr) return null;
@@ -1521,212 +1531,176 @@ function getMonthLabel(key){
   return d.toLocaleDateString('en-GB', {month:'long', year:'numeric'});
 }
 
-function populateSummaryYearFilter(){
-  var years = {};
-  invoices.forEach(function(inv){
-    if(inv.receptionDate){
-      var d = new Date(inv.receptionDate);
-      if(!isNaN(d.getTime())) years[d.getFullYear()] = true;
-    }
-  });
-  samples.forEach(function(s){
-    if(s.receptionDate){
-      var d = new Date(s.receptionDate);
-      if(!isNaN(d.getTime())) years[d.getFullYear()] = true;
-    }
-  });
-  // Always include current year
-  years[new Date().getFullYear()] = true;
-
-  var sel = document.getElementById('summaryYearFilter');
-  if(!sel) return;
-  var cur = sel.value || String(new Date().getFullYear());
-  sel.innerHTML = '';
-  Object.keys(years).sort().reverse().forEach(function(y){
-    var o = document.createElement('option');
-    o.value = y; o.textContent = y;
-    if(y === cur) o.selected = true;
-    sel.appendChild(o);
-  });
+function getShortMonthLabel(key){
+  if(!key) return '';
+  var parts = key.split('-');
+  var d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, 1);
+  return d.toLocaleDateString('en-GB', {month:'short'});
 }
 
-function renderMonthlySummary(){
-  var grid = document.getElementById('monthlySummaryGrid');
-  if(!grid) return;
+function changeYear(dir){
+  calPickerYear += dir;
+  document.getElementById('calPickerYear').textContent = calPickerYear;
+  renderCalMonthPicker();
+}
 
-  populateSummaryYearFilter();
-  var sel = document.getElementById('summaryYearFilter');
-  var year = sel ? parseInt(sel.value) : new Date().getFullYear();
+function getMonthData(year){
   var now = new Date();
-  var currentMonthKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-
-  // Build monthly data for all 12 months of selected year
-  var months = {};
-  for(var m = 1; m <= 12; m++){
+  var currentKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  var data = {};
+  for(var m=1; m<=12; m++){
     var key = year + '-' + String(m).padStart(2,'0');
-    months[key] = {
-      key: key,
-      label: getMonthLabel(key),
-      invoiced: [],    // invoices with this reception date month
-      pending: [],     // uninvoiced samples from this month
-      carried: []      // pending from previous months carried forward
-    };
+    data[key] = { invoiced:[], uninvoiced:[], carried:[] };
   }
-
-  // Assign invoices to months
   invoices.forEach(function(inv){
     var key = getMonthKey(inv.receptionDate);
-    if(key && months[key]) months[key].invoiced.push(inv);
+    if(key && data[key]) data[key].invoiced.push(inv);
   });
-
-  // Assign uninvoiced samples to months + detect carry-forwards
   samples.forEach(function(s){
     if(!s.client || !s.receptionDate) return;
     var key = getMonthKey(s.receptionDate);
     if(!key) return;
-    var hasInvoice = getSampleInvoiceStatus(s);
-    if(!hasInvoice){
-      if(months[key]){
-        months[key].pending.push(s);
-      }
-      // If from a past month, mark as carried forward in current month
-      if(key < currentMonthKey && months[currentMonthKey]){
-        months[currentMonthKey].carried.push(s);
-      }
+    if(!getSampleInvoiceStatus(s)){
+      if(data[key]) data[key].uninvoiced.push(s);
+      if(key < currentKey && data[currentKey]) data[currentKey].carried.push(s);
     }
   });
+  return data;
+}
 
-  // Render only months that have activity OR are current/future in selected year
-  var html = '';
-  var monthKeys = Object.keys(months).sort();
+function renderCalMonthPicker(){
+  var picker = document.getElementById('calMonthPicker');
+  if(!picker) return;
+  var now = new Date();
+  var currentKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  var data = getMonthData(calPickerYear);
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  
+  picker.innerHTML = months.map(function(mon, idx){
+    var m = idx + 1;
+    var key = calPickerYear + '-' + String(m).padStart(2,'0');
+    var mo = data[key];
+    var isCurrent = key === currentKey;
+    var isSelected = key === selectedMonthKey;
+    var hasInvoices = mo.invoiced.length > 0;
+    var hasUninvoiced = mo.uninvoiced.length > 0;
+    var isPast = key < currentKey;
 
-  monthKeys.forEach(function(key){
-    var mo = months[key];
-    var isCurrentMonth = key === currentMonthKey;
-    var isPastMonth = key < currentMonthKey && key.startsWith(String(year));
-    var isFutureMonth = key > currentMonthKey;
+    // Status dot
+    var dot = '';
+    if(hasUninvoiced && isPast) dot = '<div style="width:7px;height:7px;background:#DC2626;border-radius:50%;margin:2px auto 0"></div>';
+    else if(hasInvoices) dot = '<div style="width:7px;height:7px;background:#10B981;border-radius:50%;margin:2px auto 0"></div>';
+    else if(isCurrent) dot = '<div style="width:7px;height:7px;background:#0B7A8B;border-radius:50%;margin:2px auto 0"></div>';
+    else dot = '<div style="width:7px;height:7px;background:transparent;border-radius:50%;margin:2px auto 0"></div>';
 
-    // Skip future months with no activity
-    if(isFutureMonth && !mo.invoiced.length && !mo.pending.length) return;
-    // Skip past months with no activity
-    if(isPastMonth && !mo.invoiced.length && !mo.pending.length && !mo.carried.length) return;
+    var bg = isSelected ? '#0B7A8B' : isCurrent ? '#E0F5F7' : hasUninvoiced && isPast ? '#FEF2F2' : hasInvoices ? '#F0FDF4' : '#f9fafb';
+    var color = isSelected ? '#fff' : isCurrent ? '#064E5A' : hasUninvoiced && isPast ? '#DC2626' : hasInvoices ? '#065F46' : '#9CA3AF';
+    var border = isSelected ? '#0B7A8B' : isCurrent ? '#0B7A8B' : hasUninvoiced && isPast ? '#FCA5A5' : hasInvoices ? '#6EE7B7' : '#e5e7eb';
 
-    // Calculate totals
-    var totalMUR = 0, totalEUR = 0, sentCount = 0, pendingCount = mo.pending.length;
-    mo.invoiced.forEach(function(inv){
-      var c = calcInv(inv);
-      totalMUR += c.totalMUR;
-      totalEUR += parseFloat(inv.priceEUR)||0;
-      if(inv.sent === 'Yes') sentCount++;
-    });
+    return '<div onclick="selectMonth(this.dataset.key)" data-key="'+key+'" style="background:'+bg+';border:2px solid '+border+';border-radius:10px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .15s">'
+      + '<div style="font-size:12px;font-weight:700;color:'+color+'">'+mon+'</div>'
+      + dot
+      + '</div>';
+  }).join('');
+}
 
-    var carriedCount = mo.carried.length;
-    var statusColor = isPastMonth && pendingCount > 0 ? '#DC2626' : isCurrentMonth ? '#0B7A8B' : '#374151';
-    var borderColor = isPastMonth && pendingCount > 0 ? '#FCA5A5' : isCurrentMonth ? '#0B7A8B' : '#e5e7eb';
-    var bgColor = isPastMonth && pendingCount > 0 ? '#FEF2F2' : isCurrentMonth ? '#E0F5F7' : '#fff';
-    var badge = isCurrentMonth
-      ? '<span style="background:#0B7A8B;color:#fff;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700">Current</span>'
-      : isPastMonth && pendingCount > 0
-        ? '<span style="background:#DC2626;color:#fff;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700">⚠ Has pending</span>'
-        : isPastMonth
-          ? '<span style="background:#D1FAE5;color:#065F46;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700">✓ Complete</span>'
-          : '';
+function selectMonth(key){
+  selectedMonthKey = key;
+  renderCalMonthPicker();
+  renderSelectedMonthCard(key);
+  // Also filter the invoice table
+  var sel = document.getElementById('invMonthFilter');
+  if(sel){ sel.value = key; renderInvoices(); }
+}
 
-    html += '<div style="background:'+bgColor+';border:1px solid '+borderColor+';border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.06)">';
+function renderSelectedMonthCard(key){
+  var card = document.getElementById('selectedMonthCard');
+  if(!card) return;
+  if(!key){ card.style.display='none'; return; }
 
-    // Month header
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
-    html += '<div style="font-size:13px;font-weight:700;color:'+statusColor+'">'+mo.label+'</div>'+badge;
-    html += '</div>';
+  var now = new Date();
+  var currentKey = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  var data = getMonthData(calPickerYear);
+  var mo = data[key];
+  if(!mo){ card.style.display='none'; return; }
 
-    // Stats row
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
-    html += '<div style="background:rgba(11,122,139,0.08);border-radius:8px;padding:10px">';
-    html += '<div style="font-size:10px;color:#6B7280;text-transform:uppercase;letter-spacing:.3px">Revenue MUR</div>';
-    html += '<div style="font-size:16px;font-weight:800;color:#064E5A">'+fmtMUR(totalMUR)+'</div></div>';
-    html += '<div style="background:rgba(27,58,107,0.08);border-radius:8px;padding:10px">';
-    html += '<div style="font-size:10px;color:#6B7280;text-transform:uppercase;letter-spacing:.3px">Revenue EUR</div>';
-    html += '<div style="font-size:16px;font-weight:800;color:#1B3A6B">'+fmtEUR(totalEUR)+'</div></div>';
-    html += '</div>';
-
-    // Invoice stats
-    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:12px">';
-    html += '<span style="background:#f3f4f6;border-radius:6px;padding:4px 10px;color:#374151">📄 '+mo.invoiced.length+' invoice'+(mo.invoiced.length!==1?'s':'')+'</span>';
-    html += '<span style="background:#D1FAE5;border-radius:6px;padding:4px 10px;color:#065F46">✓ '+sentCount+' sent</span>';
-    if(pendingCount > 0){
-      html += '<span style="background:#FEF3C7;border-radius:6px;padding:4px 10px;color:#92400E;font-weight:600">⚠ '+pendingCount+' not invoiced</span>';
-    }
-    if(carriedCount > 0 && isCurrentMonth){
-      html += '<span style="background:#FEE2E2;border-radius:6px;padding:4px 10px;color:#991B1B;font-weight:600">↩ '+carriedCount+' carried from prev.</span>';
-    }
-    html += '</div>';
-
-    // Action buttons
-    html += '<div style="display:flex;gap:8px;margin-top:12px">';
-    html += '<button onclick="filterToMonth(\''+key+'\')" style="flex:1;background:linear-gradient(135deg,#064E5A,#0B7A8B);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;font-weight:600">View invoices</button>';
-    if(pendingCount > 0 && !isCurrentMonth){
-      html += '<button onclick="carryForwardMonth(\''+key+'\')" style="flex:1;background:#fff;border:1px solid #0B7A8B;color:#0B7A8B;border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;font-weight:600">↩ Carry forward</button>';
-    }
-    html += '</div>';
-    html += '</div>';
+  var isCurrent = key === currentKey;
+  var isPast = key < currentKey;
+  var totalMUR=0, totalEUR=0, sentCount=0;
+  mo.invoiced.forEach(function(inv){
+    var c = calcInv(inv);
+    totalMUR += c.totalMUR;
+    totalEUR += parseFloat(inv.priceEUR)||0;
+    if(inv.sent==='Yes') sentCount++;
   });
 
-  if(!html){
-    html = '<div style="grid-column:1/-1;padding:32px;text-align:center;color:#9CA3AF;font-size:13px">No invoicing activity for '+year+'. Add samples and invoices to see monthly summaries.</div>';
-  }
+  var statusBadge = isCurrent
+    ? '<span style="background:#0B7A8B;color:#fff;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700">● Current month</span>'
+    : isPast && mo.uninvoiced.length > 0
+      ? '<span style="background:#DC2626;color:#fff;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700">⚠ '+mo.uninvoiced.length+' pending</span>'
+      : '<span style="background:#D1FAE5;color:#065F46;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700">✓ Complete</span>';
 
-  grid.innerHTML = html;
+  var carryBtn = isPast && mo.uninvoiced.length > 0
+    ? '<button onclick="carryForwardMonth(this.dataset.key)" data-key="'+key+'" style="background:#fff;border:1px solid #0B7A8B;color:#0B7A8B;border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;font-weight:600">&#8629; Carry '+mo.uninvoiced.length+' to this month</button>'
+    : '';
+
+  card.style.display = 'block';
+  card.innerHTML = '<div style="background:#fff;border:2px solid #0B7A8B;border-radius:14px;padding:18px 20px;box-shadow:0 2px 12px rgba(11,122,139,0.12)">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">'
+    + '<div style="font-size:15px;font-weight:800;color:#064E5A">'+getMonthLabel(key)+'</div>'
+    + statusBadge + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">'
+    + '<div style="background:#E0F5F7;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Revenue MUR</div><div style="font-size:16px;font-weight:800;color:#064E5A">'+fmtMUR(totalMUR)+'</div></div>'
+    + '<div style="background:#EFF6FF;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Revenue EUR</div><div style="font-size:16px;font-weight:800;color:#1B3A6B">'+fmtEUR(totalEUR)+'</div></div>'
+    + '<div style="background:#D1FAE5;border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Invoices</div><div style="font-size:16px;font-weight:800;color:#065F46">'+sentCount+' / '+mo.invoiced.length+'</div></div>'
+    + '<div style="background:'+(mo.uninvoiced.length>0?'#FEF2F2':'#F9FAFB')+';border-radius:10px;padding:12px;text-align:center"><div style="font-size:10px;color:#6B7280;text-transform:uppercase;margin-bottom:4px">Not invoiced</div><div style="font-size:16px;font-weight:800;color:'+(mo.uninvoiced.length>0?'#DC2626':'#9CA3AF')+'">'+mo.uninvoiced.length+'</div></div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    + (mo.carried.length>0&&isCurrent?'<span style="background:#FEE2E2;color:#991B1B;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600">↩ '+mo.carried.length+' carried from previous months</span>':'')
+    + carryBtn
+    + '</div>'
+    + '</div>';
+}
+
+function renderMonthlySummary(){
+  // Initialize picker to current year if not set
+  if(!document.getElementById('calPickerYear')) return;
+  document.getElementById('calPickerYear').textContent = calPickerYear;
+  renderCalMonthPicker();
+  if(selectedMonthKey) renderSelectedMonthCard(selectedMonthKey);
 }
 
 function filterToMonth(monthKey){
-  // Set the month filter dropdown and scroll to table
   var sel = document.getElementById('invMonthFilter');
-  if(sel){
-    sel.value = monthKey;
-    renderInvoices();
-  }
-  // Scroll to table
-  var table = document.querySelector('#page-invoicing table');
-  if(table) table.scrollIntoView({behavior:'smooth', block:'start'});
+  if(sel){ sel.value = monthKey; renderInvoices(); }
 }
 
 function carryForwardMonth(fromMonthKey){
-  // Find all uninvoiced samples from this month and update their receptionDate to today
-  var today = new Date().toISOString().split('T')[0];
   var count = 0;
   samples.forEach(function(s){
     if(!s.client || !s.receptionDate) return;
     var key = getMonthKey(s.receptionDate);
     if(key !== fromMonthKey) return;
-    var hasInvoice = getSampleInvoiceStatus(s);
-    if(!hasInvoice){
-      // Create a carried-forward invoice placeholder
-      var newInv = {
-        rowId: 'inv' + Date.now() + Math.random().toString(36).slice(2),
+    if(!getSampleInvoiceStatus(s)){
+      invoices.push({
+        rowId: 'inv'+Date.now()+Math.random().toString(36).slice(2),
         receptionDate: s.receptionDate,
         client: s.client,
         testType: s.testType,
-        poRef: s.poNumber || '',
-        priceMUR: '',
-        priceEUR: '',
-        rate: document.getElementById('defaultRate') ? document.getElementById('defaultRate').value : '47.50',
-        invoiceNo: '',
-        sent: 'No',
-        dateSent: '',
-        remarks: 'Carried forward from ' + getMonthLabel(fromMonthKey),
-        sampleRowId: s.rowId,
-        carriedForward: true
-      };
-      invoices.push(newInv);
+        poRef: s.poNumber||'',
+        priceMUR:'', priceEUR:'',
+        rate: document.getElementById('defaultRate')?document.getElementById('defaultRate').value:'47.50',
+        invoiceNo:'', sent:'No', dateSent:'',
+        remarks:'Carried forward from '+getMonthLabel(fromMonthKey),
+        sampleRowId: s.rowId, carriedForward: true
+      });
       count++;
     }
   });
-  if(count > 0){
-    saveLocal();
-    markUnsaved();
-    renderInvoices();
-    renderMonthlySummary();
-    alert(count + ' sample(s) carried forward as draft invoices. Please add pricing and send.');
+  if(count>0){
+    saveLocal(); markUnsaved();
+    renderInvoices(); renderMonthlySummary();
+    alert(count+' sample(s) carried forward as draft invoices. Add pricing and send.');
   } else {
     alert('No uninvoiced samples found for this month.');
   }
