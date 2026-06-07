@@ -207,12 +207,12 @@ table.cal th.shd:last-child,table.cal td.sc2:last-child{width:auto !important}
     <span class="icon">📧</span> Weekly Report
   </button>
   <div class="sidebar-divider"></div>
-  <div class="sidebar-section">Finance</div>
+  <div class="sidebar-section" id="finance-section-label" style="display:none">Finance</div>
   <button class="nav-item" id="nav-invoicing" style="display:none" onclick="switchTab('invoicing',this)">
     <span class="icon">💼</span> Invoicing
   </button>
-  <button class="nav-item" id="btn-invoice-lock" onclick="handleInvoiceAccess()">
-    <span class="icon">🔐</span> Finance Access
+  <button class="nav-item" id="btn-invoice-lock" onclick="handleInvoiceAccess()" style="color:rgba(255,255,255,0.4);font-size:12px">
+    <span class="icon" style="font-size:13px">🔐</span> Finance Login
   </button>
 
   <div style="margin-top:auto;padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:8px">
@@ -414,7 +414,7 @@ table.cal th.shd:last-child,table.cal td.sc2:last-child{width:auto !important}
 </div>
 
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbwrVMKjOtx6fNNW_CM9f8M9IsPRxQMqRItrDiuWeRYJDnH-WvSH52aHThZlLC9-BmbJ2g/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbxG5r3_5Zh6HJzHQoZBkSNZFxPEfrm0RtC9L0w-O9hEKi17s5R-XnLAsPa1mwU4LKtLqQ/exec';
 const SC=[{c:'#4338CA',bg:'#EEF2FF',bd:'#A5B4FC'},{c:'#1D4ED8',bg:'#DBEAFE',bd:'#93C5FD'},{c:'#059669',bg:'#D1FAE5',bd:'#6EE7B7'},{c:'#DC2626',bg:'#FEE2E2',bd:'#FCA5A5'},{c:'#D97706',bg:'#FEF3C7',bd:'#FCD34D'},{c:'#7C3AED',bg:'#EDE9FE',bd:'#C4B5FD'},{c:'#0369A1',bg:'#E0F2FE',bd:'#7DD3FC'},{c:'#374151',bg:'#F3F4F6',bd:'#D1D5DB'}];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SH=7,EH=18,DMINS=(EH-SH)*60,SLOT=30,SCOLS=DMINS/SLOT,SW=36,NW=120;
@@ -461,7 +461,12 @@ async function loadAll(){
       taskStore={};compStore={};recurStore=[];nextTid=1;nextRid=1;
       json.data.forEach(row=>{
         if(!row.Id||!row.TaskLabel)return;
-        const sid=parseInt(String(row.StaffId||'').trim())||0;
+        let sid=parseInt(String(row.StaffId||'').trim())||0;
+        // If StaffId blank, look up by StaffName
+        if(!sid && row.StaffName){
+          const sm=staff.find(s=>s.name===String(row.StaffName).trim());
+          if(sm) sid=sm.id;
+        }
         let day=String(row.DayKey||'').trim();
         if(day.includes('T')){const d=new Date(day);const localD=new Date(d.getTime()+4*60*60*1000);day=localD.getFullYear()+'-'+String(localD.getMonth()+1).padStart(2,'0')+'-'+String(localD.getDate()).padStart(2,'0');}
         const isRec=String(row.IsRecurring).toUpperCase()==='TRUE';
@@ -474,7 +479,7 @@ async function loadAll(){
     if(json.samples!==undefined){samples=json.samples.map(s=>({id:s.Id||'',client:s.Client||'',testType:s.TestType||'',matrix:s.Matrix||'',quantity:s.Quantity||'',receptionDate:s.ReceptionDate||'',receptionTime:s.ReceptionTime||'',testStartDate:s.TestStartDate||'',testEndDate:s.TestEndDate||'',reportSentDate:s.ReportSentDate||'',assignedTo:s.AssignedTo||'',status:s.Status||'Sample received',notes:s.Notes||'',priority:s.Priority||'Normal',rowId:s.RowId||'',overdueComment:s.OverdueComment||'',reportSentLate:s.ReportSentLate||'',daysOverdue:s.DaysOverdue||'',poNumber:s.PONumber||''}));}
     setSyncStatus('ok','Live — '+new Date().toLocaleTimeString());
   }catch(e){setSyncStatus('err','Could not connect.');}
-  if(json.invoices!==undefined){invoices=json.invoices;}
+  if(json&&json.invoices!==undefined){invoices=json.invoices.map(function(inv){return {receptionDate:inv.ReceptionDate||inv.receptionDate||'',client:inv.Client||inv.client||'',testType:inv.TestType||inv.testType||'',poRef:inv.PORef||inv.poRef||'',priceMUR:inv.PriceMUR||inv.priceMUR||'',priceEUR:inv.PriceEUR||inv.priceEUR||'',rate:inv.Rate||inv.rate||'',invoiceNo:inv.InvoiceNo||inv.invoiceNo||'',sent:inv.Sent||inv.sent||'No',dateSent:inv.DateSent||inv.dateSent||'',remarks:inv.Remarks||inv.remarks||'',rowId:inv.RowId||inv.rowId||('inv'+Math.random().toString(36).slice(2))};});}
   renderCal();renderReg();renderRegStats();renderHome();updateOverdueBadge();
   return Promise.resolve();
 }
@@ -1080,7 +1085,9 @@ function handleInvoiceAccess(){
     // Lock it
     invoiceUnlocked = false;
     document.getElementById('nav-invoicing').style.display = 'none';
-    document.getElementById('btn-invoice-lock').innerHTML = '<span class="icon">🔐</span> Finance Access';
+    document.getElementById('finance-section-label').style.display = 'none';
+    document.getElementById('btn-invoice-lock').innerHTML = '<span class="icon" style="font-size:13px">🔐</span> Finance Login';
+    document.getElementById('btn-invoice-lock').style.color = 'rgba(255,255,255,0.4)';
     // Switch away if on invoicing
     if(document.getElementById('page-invoicing').classList.contains('active')){
       switchTab('home', document.getElementById('nav-home'));
@@ -1092,11 +1099,19 @@ function handleInvoiceAccess(){
   if(pin === INVOICE_PIN){
     invoiceUnlocked = true;
     document.getElementById('nav-invoicing').style.display = 'flex';
+    document.getElementById('finance-section-label').style.display = '';
     document.getElementById('btn-invoice-lock').innerHTML = '<span class="icon">🔓</span> Lock Finance';
+    document.getElementById('btn-invoice-lock').style.color = '';
     setTimeout(()=>{
       switchTab('invoicing', document.getElementById('nav-invoicing'));
     }, 100);
-    loadInvoices();
+    // Load invoices from localStorage
+    try{
+      var raw=localStorage.getItem(LS_KEY);
+      if(raw){var d=JSON.parse(raw);if(d.invoices)invoices=d.invoices;}
+    }catch(e){}
+    populateMonthFilter();
+    renderInvoices();
   } else {
     alert('Incorrect PIN.');
   }
