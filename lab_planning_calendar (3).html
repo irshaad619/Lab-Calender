@@ -26,8 +26,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sidebar-online-dot{width:6px;height:6px;background:#10B981;border-radius:50%;display:inline-block;margin-right:4px;box-shadow:0 0 6px #10B981}
 
 /* ── MAIN ── */
-.main{margin-left:230px;height:100vh;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
-.topbar{background:#fff;padding:12px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,0.06);position:sticky;top:0;z-index:50;border-bottom:1px solid #f3f4f6;width:100%;box-sizing:border-box}
+.main{margin-left:230px;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:#fff;padding:12px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,0.06);position:fixed;top:0;left:230px;right:0;z-index:90;border-bottom:1px solid #f3f4f6;box-sizing:border-box}
 .topbar-title{font-size:15px;font-weight:700;color:#1a1a2e}
 .topbar-right{display:flex;align-items:center;gap:12px}
 .sync-indicator{display:flex;align-items:center;gap:6px;font-size:12px;color:#6B7280;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:6px 12px}
@@ -41,7 +41,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .save-status{font-size:12px;max-width:280px}
 
 /* ── PAGES ── */
-.page{display:none;padding:20px 24px 32px 24px;flex:1;box-sizing:border-box}
+.page{display:none;padding:76px 24px 32px 24px;flex:1;box-sizing:border-box}
 .page.active{display:block}
 
 /* ── HOME DASHBOARD ── */
@@ -372,7 +372,7 @@ table.cal th.shd:last-child,table.cal td.sc2:last-child{width:auto !important}
   </div>
 
   <!-- Summary cards — ALWAYS at top -->
-  <div id="invSummary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px">
+  <div id="invSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px">
     <div style="background:linear-gradient(135deg,#064E5A,#0B7A8B);border-radius:14px;padding:16px 20px;color:#fff"><div style="font-size:11px;opacity:.7;text-transform:uppercase">Total Revenue (MUR)</div><div style="font-size:22px;font-weight:800;margin:6px 0">Rs 0.00</div><div style="font-size:11px;opacity:.7">incl. EUR conversions</div></div>
     <div style="background:linear-gradient(135deg,#1B3A6B,#2563eb);border-radius:14px;padding:16px 20px;color:#fff"><div style="font-size:11px;opacity:.7;text-transform:uppercase">Total Revenue (EUR)</div><div style="font-size:22px;font-weight:800;margin:6px 0">€ 0.00</div><div style="font-size:11px;opacity:.7">before conversion</div></div>
     <div style="background:linear-gradient(135deg,#059669,#10B981);border-radius:14px;padding:16px 20px;color:#fff"><div style="font-size:11px;opacity:.7;text-transform:uppercase">Invoices Sent</div><div style="font-size:32px;font-weight:800;margin:4px 0">0</div><div style="font-size:11px;opacity:.7">of 0 total</div></div>
@@ -463,11 +463,7 @@ function switchTab(tab,el){
   document.getElementById('page-'+tab).classList.add('active');
   (el||document.getElementById('nav-'+tab)).classList.add('active');
   document.getElementById('pageTitle').innerHTML=pageTitles[tab]||'';
-  // Scroll both window and main container to top
   window.scrollTo({top:0,behavior:'instant'});
-  var mainEl=document.querySelector('.main');
-  if(mainEl){mainEl.scrollTop=0;}
-  document.getElementById('page-'+tab).scrollTop=0;
   if(tab==='home')renderHome();
   if(tab==='invoicing'&&typeof renderInvoices==='function')renderInvoices();
 }
@@ -1000,6 +996,7 @@ function renderReg(){
       </div></td>
     </tr>`;
   }).join('');
+  tbody.innerHTML+=tbody.innerHTML?'':'';
 }
 
 // ── REGISTRY MODALS ────────────────────────────────────────────────────────
@@ -1214,6 +1211,7 @@ function getFilteredInvoices(){
 function renderInvSummary(){
   var filtered=getFilteredInvoices();
   var totalMUR=0,totalEUR=0,sent=0,pending=0;
+  var uninvoicedCount=samples.filter(function(s){return s.client&&!getSampleInvoiceStatus(s);}).length;
   filtered.forEach(function(inv){var c=calcInv(inv);totalMUR+=c.totalMUR;totalEUR+=parseFloat(inv.priceEUR)||0;if(inv.sent==='Yes')sent++;else pending++;});
   var el=document.getElementById('invSummary');
   if(!el)return;
@@ -1236,7 +1234,20 @@ function renderInvSummary(){
     '<div style="background:linear-gradient(135deg,#D97706,#F59E0B);border-radius:14px;padding:16px 20px;color:#fff;box-shadow:0 4px 15px rgba(245,158,11,0.3)">'+
     '<div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px">Pending</div>'+
     '<div style="font-size:32px;font-weight:800;margin:4px 0">'+pending+'</div>'+
-    '<div style="font-size:11px;opacity:.7">awaiting dispatch</div></div>';
+    '<div style="font-size:11px;opacity:.7">awaiting dispatch</div></div>'+
+    (uninvoicedCount>0?
+    '<div style="background:linear-gradient(135deg,#B45309,#D97706);border-radius:14px;padding:16px 20px;color:#fff;box-shadow:0 4px 15px rgba(180,83,9,0.3)">'+
+    '<div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.5px">Not Yet Invoiced</div>'+
+    '<div style="font-size:32px;font-weight:800;margin:4px 0">'+uninvoicedCount+'</div>'+
+    '<div style="font-size:11px;opacity:.7">samples need invoice</div></div>':'');
+}
+
+function getSampleInvoiceStatus(sample){
+  // Find if this sample already has an invoice
+  return invoices.find(function(inv){
+    return inv.sampleRowId===sample.rowId || 
+           (inv.client===sample.client && inv.receptionDate===sample.receptionDate && inv.testType===sample.testType);
+  });
 }
 
 function renderInvoices(){
@@ -1245,11 +1256,40 @@ function renderInvoices(){
   renderInvSummary();
   var filtered=getFilteredInvoices();
   var tbody=document.getElementById('invBody');
-  if(!filtered.length){
-    tbody.innerHTML='<tr><td colspan="14" style="padding:48px;text-align:center;color:#9CA3AF;font-size:13px">No invoices found. Click "+ New invoice" to create one.</td></tr>';
+
+  // Build list: manual invoices + uninvoiced samples
+  var uninvoiced=samples.filter(function(s){
+    return s.client && !getSampleInvoiceStatus(s);
+  });
+
+  if(!filtered.length && !uninvoiced.length){
+    tbody.innerHTML='<tr><td colspan="14" style="padding:48px;text-align:center;color:#9CA3AF;font-size:13px">No invoices yet. All samples will appear here automatically.</td></tr>';
     return;
   }
-  tbody.innerHTML=filtered.map(function(inv){
+
+  // Uninvoiced samples rows (shown at top in amber)
+  var uninvoicedRows=uninvoiced.map(function(s){
+    return '<tr style="border-bottom:1px solid #FDE68A;background:#FFFBEB">'+
+      '<td style="padding:10px 12px;font-size:13px;white-space:nowrap">'+fmtDate(s.receptionDate)+'</td>'+
+      '<td style="padding:10px 12px;font-size:13px;font-weight:600">'+s.client+'</td>'+
+      '<td style="padding:10px 12px;font-size:13px">'+s.testType+'</td>'+
+      '<td style="padding:10px 12px;font-size:12px;color:#0B7A8B;font-weight:600">'+(s.poNumber||'—')+'</td>'+
+      '<td style="padding:10px 12px;font-size:13px;text-align:right;color:#9CA3AF">—</td>'+
+      '<td style="padding:10px 12px;font-size:13px;text-align:right;color:#9CA3AF">—</td>'+
+      '<td style="padding:10px 12px;font-size:13px;text-align:right;color:#9CA3AF">—</td>'+
+      '<td style="padding:10px 12px;font-size:13px;text-align:right;color:#9CA3AF">—</td>'+
+      '<td style="padding:10px 12px;font-size:13px;text-align:right;color:#9CA3AF">—</td>'+
+      '<td style="padding:10px 12px;font-size:13px;color:#9CA3AF">—</td>'+
+      '<td style="padding:10px 12px;text-align:center"><span style="background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700">&#9888; Not invoiced</span></td>'+
+      '<td style="padding:10px 12px;font-size:12px;color:#9CA3AF">—</td>'+
+      '<td style="padding:10px 12px;font-size:12px;color:#9CA3AF">—</td>'+
+      '<td style="padding:10px 12px"><button onclick="openInvoiceFromSample(this.dataset.id)" data-id="'+s.rowId+'" style="background:linear-gradient(135deg,#064E5A,#0B7A8B);color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:11px;cursor:pointer;font-weight:600;white-space:nowrap">+ Invoice</button></td>'+
+    '</tr>';
+  }).join('');
+
+  tbody.innerHTML=uninvoicedRows;
+  if(!filtered.length){return;}
+  tbody.innerHTML+=filtered.map(function(inv){
     var c=calcInv(inv);
     var sentBadge=inv.sent==='Yes'
       ?'<span style="background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7;border-radius:12px;padding:3px 10px;font-size:11px;font-weight:700">&#10003; Sent</span>'
@@ -1360,6 +1400,38 @@ function getInvFormData(){
     invoiceNo:v('i-invno'),sent:v('i-sent'),dateSent:v('i-datesent'),
     remarks:(document.getElementById('i-remarks')||{}).value||''
   };
+}
+
+function openInvoiceFromSample(sampleRowId){
+  var s=samples.find(function(x){return x.rowId===sampleRowId;});
+  if(!s)return;
+  // Pre-fill form with sample data
+  var prefilled={
+    receptionDate:s.receptionDate||'',
+    client:s.client||'',
+    testType:s.testType||'',
+    poRef:s.poNumber||'',
+    sampleRowId:sampleRowId
+  };
+  window._editInvId=null;
+  window._currentSampleId=sampleRowId;
+  openModal('<h3>💼 Create Invoice — '+s.client+'</h3>'+invoiceForm(prefilled)+
+    '<div class="ma"><button class="bc" onclick="closeModal()">Cancel</button>'+
+    '<button class="bp" onclick="saveInvoiceFromSample(window._currentSampleId)">Save invoice</button></div>');
+  updateInvCalc();
+}
+
+function saveInvoiceFromSample(sid){
+  var sampleRowId=sid||window._currentSampleId||'';
+  var data=getInvFormData();
+  if(!data.client){alert('Please enter a client name.');return;}
+  data.rowId='inv'+Date.now();
+  data.sampleRowId=sampleRowId;
+  invoices.push(data);
+  saveLocal();
+  markUnsaved();
+  closeModal();
+  renderInvoices();
 }
 
 function openAddInvoice(){
