@@ -291,7 +291,7 @@ const STATUSES=['Sample received','Test in progress','Test completed','Report se
 const SBADGE={'Sample received':'b-received','Test in progress':'b-testing','Test completed':'b-completed','Report sent':'b-report','Invoice done & forwarded':'b-invoice'};
 const TEST_TYPES=[];
 
-let staff=[],taskStore={},compStore={},recurStore=[],samples=[],invoices=[];
+let staff=[],taskStore={},compStore={},recurStore=[],samples=[],invoices=[],taskComments={};
 let nextTid=1,nextRid=1,view='daily',offset=0;
 const today=new Date();
 
@@ -341,6 +341,7 @@ async function loadAll(){
       if(local.taskStore) taskStore=local.taskStore;
       if(local.compStore) compStore=local.compStore;
       if(local.recurStore) recurStore=local.recurStore;
+      if(local.taskComments) taskComments=local.taskComments;
       renderCal();renderReg();renderRegStats();renderHome();
     }
   }catch(e){}
@@ -362,7 +363,18 @@ async function loadAll(){
         const isRec=String(row.IsRecurring).toUpperCase()==='TRUE';
         const done=String(row.IsDone).toUpperCase()==='TRUE';
         if(!sid)return;
-        if(isRec){recurStore.push({id:row.Id,sid,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime),days:row.RecurDays||'daily'});const n=parseInt(String(row.Id).replace('r',''))||0;if(n>=nextRid)nextRid=n+1;}
+        if(isRec){
+          // Check if this is a completion record (Id starts with C_)
+          if(String(row.Id).startsWith('C_')&&day){
+            // Restore recurring task completion for this specific day
+            const compTid='R'+String(row.Id).split('_')[1];
+            compStore[ck(sid,day,compTid)]=true;
+          } else {
+            recurStore.push({id:row.Id,sid,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime),days:row.RecurDays||'daily'});
+            const n=parseInt(String(row.Id).replace('r',''))||0;
+            if(n>=nextRid)nextRid=n+1;
+          }
+        }
         else{if(!day)return;const k=tk(sid,day);if(!taskStore[k])taskStore[k]=[];taskStore[k].push({id:row.Id,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime)});if(done)compStore[ck(sid,day,row.Id)]=true;const n=parseInt(String(row.Id).replace('t',''))||0;if(n>=nextTid)nextTid=n+1;}
       });
     }
@@ -522,10 +534,43 @@ function renderHome(){
 
 // ── SAVE ───────────────────────────────────────────────────────────────────
 const LS_KEY='abiolabs_lms_v3';
-function saveLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify({taskStore,compStore,recurStore,samples,invoices:invoices||[],nextTid,nextRid,ts:Date.now()}));}catch(e){}}
+function saveLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify({taskStore,compStore,recurStore,samples,invoices:invoices||[],taskComments:taskComments||{},nextTid,nextRid,ts:Date.now()}));}catch(e){}}
 function markUnsaved(){saveLocal();document.getElementById('saveStatus').innerHTML='<span style="color:#F59E0B;font-weight:600">⚠ Unsaved changes</span>';}
 
-function buildTaskRows(){const rows=[];Object.keys(taskStore).forEach(key=>{(taskStore[key]||[]).forEach(t=>{const parts=key.split('|');const sid=parseInt(parts[0]),day=parts[1];const done=compStore[ck(sid,day,t.id)]?'TRUE':'FALSE';const sm=staff.find(s=>s.id===sid)||{name:''};rows.push({Id:String(t.id),StaffId:sid,StaffName:sm.name,DayKey:day,TaskLabel:t.label,StartTime:t.sm,EndTime:t.em,IsRecurring:'FALSE',RecurDays:'',IsDone:done});});});recurStore.forEach(r=>{const sm=staff.find(s=>s.id===r.sid)||{name:''};rows.push({Id:String(r.id),StaffId:r.sid,StaffName:sm.name,DayKey:'',TaskLabel:r.label,StartTime:r.sm,EndTime:r.em,IsRecurring:'TRUE',RecurDays:r.days,IsDone:'FALSE'});});return rows;}
+function buildTaskRows(){
+  const rows=[];
+  // Save one-time tasks
+  Object.keys(taskStore).forEach(key=>{
+    (taskStore[key]||[]).forEach(t=>{
+      const parts=key.split('|');
+      const sid=parseInt(parts[0]),day=parts[1];
+      const done=compStore[ck(sid,day,t.id)]?'TRUE':'FALSE';
+      const sm=staff.find(s=>s.id===sid)||{name:''};
+      rows.push({Id:String(t.id),StaffId:sid,StaffName:sm.name,DayKey:day,TaskLabel:t.label,StartTime:t.sm,EndTime:t.em,IsRecurring:'FALSE',RecurDays:'',IsDone:done});
+    });
+  });
+  // Save recurring tasks (base definition - no day)
+  recurStore.forEach(r=>{
+    const sm=staff.find(s=>s.id===r.sid)||{name:''};
+    rows.push({Id:String(r.id),StaffId:r.sid,StaffName:sm.name,DayKey:'',TaskLabel:r.label,StartTime:r.sm,EndTime:r.em,IsRecurring:'TRUE',RecurDays:r.days,IsDone:'FALSE'});
+  });
+  // Save recurring task COMPLETIONS per day as separate rows
+  Object.keys(compStore).forEach(key=>{
+    if(!compStore[key]) return;
+    const parts=key.split('|');
+    if(parts.length!==3) return;
+    const sid=parseInt(parts[0]),day=parts[1],tid=parts[2];
+    // Only save recurring completions (tid starts with 'R')
+    if(!String(tid).startsWith('R')) return;
+    const rid=String(tid).slice(1); // remove 'R' prefix
+    const r=recurStore.find(x=>String(x.id)===rid);
+    if(!r) return;
+    const sm=staff.find(s=>s.id===r.sid)||{name:''};
+    // Save as a special completion record
+    rows.push({Id:'C_'+String(r.id)+'_'+day,StaffId:r.sid,StaffName:sm.name,DayKey:day,TaskLabel:r.label,StartTime:r.sm,EndTime:r.em,IsRecurring:'TRUE',RecurDays:r.days,IsDone:'TRUE'});
+  });
+  return rows;
+}
 function buildSampleRows(){return samples.map(s=>({Id:s.id,Client:s.client,TestType:s.testType,Matrix:s.matrix,Quantity:s.quantity,ReceptionDate:s.receptionDate,ReceptionTime:s.receptionTime||'',TestStartDate:s.testStartDate,TestEndDate:s.testEndDate,ReportSentDate:s.reportSentDate,AssignedTo:s.assignedTo,Status:s.status,Notes:s.notes,Priority:s.priority,RowId:s.rowId,OverdueComment:s.overdueComment||'',ReportSentLate:s.reportSentLate||'',DaysOverdue:s.daysOverdue||'',PONumber:s.poNumber||''}));}
 
 async function postSave(action,payload){try{await fetch(API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...payload})});return{status:'ok'};}catch(e){throw e;}}
@@ -641,6 +686,18 @@ function renderWeekly(startDate,sl){
   });
   h+=`</tbody></table></div>`;
   document.getElementById('calView').innerHTML=h;
+}
+
+
+function saveTaskComment(sid,day,tid,comment){
+  var key=sid+'|'+day+'|'+tid;
+  if(comment && comment.trim()){
+    taskComments[key]=comment.trim();
+  } else {
+    delete taskComments[key];
+  }
+  saveLocal();
+  markUnsaved();
 }
 
 function renderReview(sl){
