@@ -713,17 +713,33 @@ function renderReview(sl){
   h+='<div style="height:4px;background:#f3f4f6"><div style="height:4px;width:'+pct+'%;background:'+barCol+';transition:width .4s"></div></div>';
   if(!all2.length){h+='<div style="padding:24px;text-align:center;color:#9CA3AF;font-size:13px">No tasks today. Click any slot to add one.</div>';}
   else{
-    all2.forEach(function(item){
+        all2.forEach(function(item){
       var s=item.s,t=item.t,c=sc(s),done=isDone(s.id,day,t.id);
       var sid=s.id,safeDay=day,safeTid=String(t.id);
-      h+='<div class="rev-row">';
-      var oc="toggleDone("+sid+",'"+safeDay+"','"+safeTid+"')";h+='<button class="chk'+(done?' done':'')+'" onclick="'+oc+'">'+((done)?'&#10003;':'')+'</button>';
-      h+='<div class="av" style="background:'+c.bg+';color:'+c.c+';width:24px;height:24px;font-size:9px">'+ini(s.name)+'</div>';
+      var commentKey=sid+'|'+safeDay+'|'+safeTid;
+      var existingComment=(taskComments&&taskComments[commentKey])||'';
+      var oc='toggleDone('+sid+',\''+safeDay+'\',\''+safeTid+'\')';
+      h+='<div class="rev-row" style="flex-wrap:wrap;align-items:flex-start">';
+      // Main row
+      h+='<div style="display:flex;align-items:center;gap:8px;width:100%">';
+      h+='<button class="chk'+(done?' done':'')+'" onclick="'+oc+'">'+(done?'&#10003;':'')+'</button>';
+      h+='<div class="av" style="background:'+c.bg+';color:'+c.c+';width:24px;height:24px;font-size:9px;flex-shrink:0">'+ini(s.name)+'</div>';
       h+='<div style="flex:1;min-width:0">';
       h+='<div style="font-size:13px;'+(done?'text-decoration:line-through;opacity:.5':'')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+t.label+'</div>';
       h+='<div style="font-size:11px;color:#6B7280">'+s.name+' &middot; '+fmtT(t.sm)+'&ndash;'+fmtT(t.em)+(t.isRec?' &middot; &#8635;':'')+'</div>';
       h+='</div>';
-      h+='<span style="font-size:11px;font-weight:600;color:'+(done?'#10B981':'#9CA3AF')+';flex-shrink:0;margin-left:8px">'+(done?'&#10003; Done':'Pending')+'</span>';
+      h+='<span style="font-size:11px;font-weight:600;color:'+(done?'#059669':'#9CA3AF')+';flex-shrink:0;margin-left:8px">'+(done?'&#10003; Done':'Pending')+'</span>';
+      h+='</div>';
+      // Comment field for pending tasks
+      if(!done){
+        h+='<div style="width:100%;padding:6px 0 4px 64px">';
+        h+='<input type="text" placeholder="&#128172; Add reason for delay or comment..." value="'+existingComment.replace(/"/g,'&quot;')+'"';
+        h+=' data-sid="'+sid+'" data-day="'+safeDay+'" data-tid="'+safeTid+'" onchange="saveTaskComment(parseInt(this.dataset.sid),this.dataset.day,this.dataset.tid,this.value)"';
+        h+=' style="width:100%;font-size:11px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:6px;outline:none;color:#374151;background:#fafafa;box-sizing:border-box">';
+        h+='</div>';
+      } else if(existingComment){
+        h+='<div style="width:100%;padding:2px 0 4px 64px;font-size:11px;color:#6B7280;font-style:italic">&#128172; '+existingComment+'</div>';
+      }
       h+='</div>';
     });
   }
