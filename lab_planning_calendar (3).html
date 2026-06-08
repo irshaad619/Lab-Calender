@@ -331,6 +331,19 @@ function jsonp(url){return new Promise((resolve,reject)=>{const cb='cb_'+Date.no
 
 async function loadAll(){
   setSyncStatus('syncing','Loading…');
+  // First load from localStorage so UI shows immediately
+  try{
+    var raw=localStorage.getItem(LS_KEY);
+    if(raw){
+      var local=JSON.parse(raw);
+      if(local.samples&&local.samples.length>0) samples=local.samples;
+      if(local.invoices&&local.invoices.length>0) invoices=local.invoices;
+      if(local.taskStore) taskStore=local.taskStore;
+      if(local.compStore) compStore=local.compStore;
+      if(local.recurStore) recurStore=local.recurStore;
+      renderCal();renderReg();renderRegStats();renderHome();
+    }
+  }catch(e){}
   try{
     const json=await jsonp(API_URL+'?action=readAll');
     if(json.staff&&json.staff.length>0){staff=json.staff.map(s=>({id:parseInt(s.Id||s.id)||0,name:String(s.Name||s.name||''),role:String(s.Role||s.role||''),ci:parseInt(s.ColorIndex||s.ci)||0}));updateFilter();}
@@ -353,7 +366,7 @@ async function loadAll(){
         else{if(!day)return;const k=tk(sid,day);if(!taskStore[k])taskStore[k]=[];taskStore[k].push({id:row.Id,label:row.TaskLabel,sm:parseInt(row.StartTime),em:parseInt(row.EndTime)});if(done)compStore[ck(sid,day,row.Id)]=true;const n=parseInt(String(row.Id).replace('t',''))||0;if(n>=nextTid)nextTid=n+1;}
       });
     }
-    if(json.samples!==undefined){samples=json.samples.map(s=>({id:s.Id||'',client:s.Client||'',testType:s.TestType||'',matrix:s.Matrix||'',quantity:s.Quantity||'',receptionDate:s.ReceptionDate||'',receptionTime:s.ReceptionTime||'',testStartDate:s.TestStartDate||'',testEndDate:s.TestEndDate||'',reportSentDate:s.ReportSentDate||'',assignedTo:s.AssignedTo||'',status:s.Status||'Sample received',notes:s.Notes||'',priority:s.Priority||'Normal',rowId:s.RowId||'',overdueComment:s.OverdueComment||'',reportSentLate:s.ReportSentLate||'',daysOverdue:s.DaysOverdue||'',poNumber:s.PONumber||''}));}
+    if(json.samples!==undefined&&json.samples.length>=samples.length){samples=json.samples.map(s=>({id:s.Id||'',client:s.Client||'',testType:s.TestType||'',matrix:s.Matrix||'',quantity:s.Quantity||'',receptionDate:s.ReceptionDate||'',receptionTime:s.ReceptionTime||'',testStartDate:s.TestStartDate||'',testEndDate:s.TestEndDate||'',reportSentDate:s.ReportSentDate||'',assignedTo:s.AssignedTo||'',status:s.Status||'Sample received',notes:s.Notes||'',priority:s.Priority||'Normal',rowId:s.RowId||'',overdueComment:s.OverdueComment||'',reportSentLate:s.ReportSentLate||'',daysOverdue:s.DaysOverdue||'',poNumber:s.PONumber||''}));}
     setSyncStatus('ok','Live — '+new Date().toLocaleTimeString());
   }catch(e){setSyncStatus('err','Could not connect.');}
 
@@ -538,7 +551,18 @@ async function manualSave(){
       (typeof invoices!=='undefined'&&invoices.length)?postSave('writeInvoices',{invoices:buildInvoiceRows()}):Promise.resolve()
     ]);
     clearTimeout(saveTimeout);
-    status.innerHTML='<span style="color:#059669;font-weight:600">✓ Saved — '+new Date().toLocaleTimeString()+'</span>';
+    // Verify save by reading back after 3 seconds
+    await new Promise(r=>setTimeout(r,3000));
+    try{
+      const verify=await jsonp(API_URL+'?action=readAll');
+      if(verify&&verify.samples&&verify.samples.length>=samples.length){
+        status.innerHTML='<span style="color:#059669;font-weight:600">✓ Saved & verified — '+new Date().toLocaleTimeString()+'</span>';
+      } else {
+        status.innerHTML='<span style="color:#F59E0B;font-weight:600">⚠ Save may be incomplete — try again</span>';
+      }
+    }catch(e){
+      status.innerHTML='<span style="color:#059669;font-weight:600">✓ Sent to server — '+new Date().toLocaleTimeString()+'</span>';
+    }
   }catch(e){
     clearTimeout(saveTimeout);
     status.innerHTML='<span style="color:#F59E0B;font-weight:600">⚠ Local only — check connection</span>';
